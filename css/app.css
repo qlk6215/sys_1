@@ -28,6 +28,22 @@ button:disabled { opacity: .5; cursor: default; }
 table.slots { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.slots td, table.slots th { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; }
 table.slots button { padding: 2px 8px; }
+table.slots input, table.slots select { padding: 4px 6px; font-size: 14px; }
+table.slots input[data-f="name"] { width: 100%; min-width: 120px; }
+table.slots input[data-f="location"] { width: 130px; }
+table.slots input[type=time] { width: 96px; }
+table.slots .nowrap { white-space: nowrap; }
+table.slots td:first-child { display: flex; align-items: center; gap: 6px; }
+table.slots tr.flash { background: #fff4cc; transition: background .3s; }
+.swatch { display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 2px; }
+.table-title { font-size: 14px; margin: 16px 0 4px; }
+.table-title small { font-weight: 400; color: var(--muted); }
+@media (max-width: 640px) {
+  table.slots thead { display: none; }
+  table.slots tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  table.slots td { border: none; padding: 0; }
+  table.slots td:first-child { grid-column: 1 / -1; }
+}
 
 /* 주간 격자 */
 .grid { display: grid; grid-template-columns: 48px repeat(var(--days, 5), 1fr); border-top: 1px solid var(--line); font-size: 12px; }

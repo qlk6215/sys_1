@@ -88,8 +88,9 @@
     <p class="msg" id="my-msg"></p>
 
     <div id="my-grid" style="margin-top:8px"></div>
-    <p class="legend">드래그: 수업 추가 · 블록 클릭: 이름 바꾸기 · ×: 삭제</p>
+    <p class="legend">격자 드래그: 수업 추가 · 블록 클릭: 아래 표에서 수정 · ×: 삭제</p>
 
+    <h3 class="table-title" id="slot-title" hidden>수업 목록 <small>— 과목명·요일·시간·강의실을 바로 고칠 수 있어요. 다 고치면 저장을 눌러 주세요.</small></h3>
     <table class="slots" id="slot-table" hidden>
       <thead><tr><th>과목</th><th>요일</th><th>시간</th><th>강의실</th><th></th></tr></thead>
       <tbody></tbody>
@@ -234,17 +235,30 @@ document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click
 
 function renderMySlots() {
   const tb = $("#slot-table tbody");
-  $("#slot-table").hidden = !mySlots.length;
+  $("#slot-table").hidden = $("#slot-title").hidden = !mySlots.length;
   const color = {};
   mySlots.forEach(s => color[s.name] ??= COLORS[Object.keys(color).length % COLORS.length]);
   tb.innerHTML = mySlots
     .map((s, i) => ({ s, i }))
     .sort((a, b) => DAYS.indexOf(a.s.day) - DAYS.indexOf(b.s.day) || a.s.start.localeCompare(b.s.start))
-    .map(({ s, i }) => `<tr>
-      <td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${color[s.name]};margin-right:6px"></i>${esc(s.name)}</td>
-      <td>${DAY_KO[s.day]}</td><td>${s.start}~${s.end}</td><td>${esc(s.location || "")}</td>
-      <td><button data-i="${i}">삭제</button></td></tr>`).join("");
-  tb.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { mySlots.splice(+b.dataset.i, 1); markDirty(); }));
+    .map(({ s, i }) => `<tr data-i="${i}">
+      <td><i class="swatch" style="background:${color[s.name]}"></i><input data-f="name" value="${esc(s.name)}" maxlength="50"></td>
+      <td><select data-f="day">${DAYS.map(d => `<option value="${d}" ${d === s.day ? "selected" : ""}>${DAY_KO[d]}</option>`).join("")}</select></td>
+      <td class="nowrap"><input type="time" data-f="start" value="${s.start}" step="300"> ~ <input type="time" data-f="end" value="${s.end}" step="300"></td>
+      <td><input data-f="location" value="${esc(s.location || "")}" placeholder="강의실" maxlength="50"></td>
+      <td><button data-del="${i}" title="삭제">삭제</button></td></tr>`).join("");
+  tb.querySelectorAll("button[data-del]").forEach(b => b.addEventListener("click", () => { mySlots.splice(+b.dataset.del, 1); markDirty(); }));
+  tb.querySelectorAll("[data-f]").forEach(el => el.addEventListener("change", () => {
+    const s = mySlots[+el.closest("tr").dataset.i], f = el.dataset.f, v = el.value.trim();
+    const msg = $("#my-msg");
+    if (f === "name" && !v) { el.value = s.name; return; }
+    if ((f === "start" || f === "end") && (!v || toMin(f === "start" ? v : s.start) >= toMin(f === "end" ? v : s.end))) {
+      showError(msg, new Error("끝나는 시각이 시작 시각보다 늦어야 합니다.")); el.value = s[f]; return;
+    }
+    msg.className = "msg"; msg.textContent = "";
+    s[f] = f === "location" ? (v || null) : v;
+    markDirty();
+  }));
   $("#save").disabled = !dirty;
   renderMyGrid(color);
 }
@@ -304,11 +318,14 @@ function renderMyGrid(color) {
       col.addEventListener("pointerup", up, { once: true });
     });
   });
+  // 블록 클릭 → 아래 표의 해당 줄로 이동해서 바로 고칠 수 있게
   box.querySelectorAll(".slot").forEach(el => el.addEventListener("click", (e) => {
     const i = +el.dataset.i;
     if (e.target.classList.contains("x")) { mySlots.splice(i, 1); markDirty(); return; }
-    const name = prompt("과목명", mySlots[i].name);
-    if (name && name.trim()) { mySlots[i].name = name.trim().slice(0, 50); markDirty(); }
+    const row = $(`#slot-table tr[data-i="${i}"]`);
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+    row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 1200);
+    row.querySelector('[data-f="name"]').focus();
   }));
 }
 function markDirty() { dirty = true; renderMySlots(); }
@@ -328,9 +345,15 @@ $("#file").addEventListener("change", async (e) => {
   const msg = $("#my-msg"); msg.className = "msg"; msg.textContent = "시간표를 읽는 중…";
   await new Promise(r => setTimeout(r, 30)); // 안내 문구가 먼저 그려지도록
   try {
-    const r = await TP_TIMETABLE.extractTimetable(file, +$("#first-hour").value);
+    const r = await TP_TIMETABLE.extractTimetable(file, +$("#first-hour").value, {
+      onProgress: (status, p) => {
+        msg.textContent = status === "과목명 읽는 중"
+          ? `과목명 읽는 중… ${Math.round(p * 100)}%`
+          : "글자 인식 준비 중… (처음 한 번만 몇 초 걸려요)";
+      },
+    });
     mySlots = r.classes; markDirty();
-    msg.innerHTML = `수업 ${r.classes.length}개를 찾았습니다. 아래 격자에서 시간을 확인하고, 과목명은 블록을 눌러 바꾼 뒤 저장해 주세요.` +
+    msg.innerHTML = `수업 ${r.classes.length}개를 찾았습니다. 아래 수업 목록에서 과목명·시간·강의실을 확인하고, 틀린 곳은 고친 뒤 저장해 주세요.` +
       r.warnings.map(w => `<br>⚠ ${esc(w)}`).join("");
   } catch (err) { showError(msg, err); }
   e.target.value = "";
