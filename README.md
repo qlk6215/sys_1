@@ -17,7 +17,7 @@
 | `js/timetable.js` | 시간표 이미지 인식 |
 | `js/scheduler.js` | 공통 빈 시간 계산 |
 | `supabase/schema.sql` | DB 테이블과 함수 |
-| `legacy-python/` | 이전 FastAPI 버전 (배포에 포함 안 됨) |
+| `vercel.json` | Vercel 설정 (빌드 없는 정적 사이트) |
 
 ## 설정
 
