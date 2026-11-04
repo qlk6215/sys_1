@@ -22,8 +22,10 @@
   </div>
 
   <!-- 참여 -->
-  <div class="card" id="join-card" hidden>
+  <div class="card join-card" id="join-card" hidden>
     <h2>이 팀에 참여</h2>
+    <p class="msg" style="margin:0 0 10px">이름을 넣고 참여하면 <b>내 시간표 사진을 올릴 수 있어요.</b><br>
+      <small>다른 기기(PC 등)에서 이미 참여했다면, 그 기기에서 <b>'다른 기기에서 열기'</b>를 눌러 나오는 QR/링크로 들어오세요.</small></p>
     <form class="row" id="join">
       <input name="name" placeholder="내 이름" required maxlength="30">
       <button class="primary">참여</button>
@@ -62,7 +64,16 @@
 
   <!-- 내 시간표 -->
   <div class="card" id="my-card" hidden>
-    <h2>내 시간표 <small id="my-name" style="color:var(--muted);font-weight:400"></small></h2>
+    <div class="my-head">
+      <h2>내 시간표 <small id="my-name" style="color:var(--muted);font-weight:400"></small></h2>
+      <button id="device-link" title="휴대폰 등 다른 기기에서 내 시간표를 고칠 수 있는 링크">다른 기기에서 열기</button>
+    </div>
+    <div class="device-box" id="device-box" hidden>
+      <p><b>이 QR을 휴대폰 카메라로 찍거나 링크를 열면</b>, 그 기기에서도 <b id="device-name"></b>(으)로 시간표를 고칠 수 있어요.<br>
+        <small>이 링크는 내 시간표를 수정할 수 있는 열쇠예요. 팀원에게 보내지 말고 본인 기기에서만 여세요.</small></p>
+      <div id="device-qr"></div>
+      <div class="row"><input id="device-url" readonly><button id="device-copy">복사</button><button class="ghost" id="device-close">닫기</button></div>
+    </div>
     <div class="tabs">
       <button class="on" data-tab="upload">이미지로 불러오기</button>
       <button data-tab="manual">직접 입력</button>
@@ -149,10 +160,21 @@ function fatal(message) {
 }
 
 // ---- 로드 ----
+// '다른 기기에서 열기' 링크(#me=멤버id.토큰)로 들어온 경우 이 기기에도 멤버십 저장.
+// 토큰은 # 뒤에 있어서 서버로 전송되지 않고, 저장 후 주소창에서 지운다.
+function takeDeviceLink() {
+  const m = location.hash.match(/^#me=(\d+)\.([A-Za-z0-9_-]+)$/);
+  if (!m) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  const member = team.members.find(x => x.id === +m[1]);
+  if (member) store.set({ id: member.id, token: m[2], name: member.name, teamName: team.name });
+}
+
 async function load() {
   if (!CODE) return fatal("초대 코드가 없습니다.");
   try { team = await TP_API.getTeam(CODE); }
   catch (e) { return fatal(e.message); }
+  if (team) takeDeviceLink();
   if (!team) return fatal("팀을 찾을 수 없습니다. 초대 코드를 확인해 주세요.");
   TP_STORE.rememberTeam(team.code, team.name); // 홈 화면 '내 팀' 목록에 추가
 
@@ -224,6 +246,10 @@ function renderFree() {
 $("#join").addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = e.target.name.value.trim();
+  if (team.members.some(m => m.name === name) && !confirm(
+    `이 팀에 이미 '${name}'이(가) 있어요.\n\n` +
+    `본인이 다른 기기에서 참여했던 거라면 [취소]를 누르고, 그 기기에서 '다른 기기에서 열기'로 들어오세요.\n` +
+    `(새로 참여하면 같은 이름이 두 명 생깁니다)\n\n동명이인이라 새로 참여하려면 [확인]을 누르세요.`)) return;
   try {
     const m = await TP_API.joinTeam(CODE, name);
     store.set({ id: m.id, token: m.token, name: m.name, teamName: team.name });
@@ -249,6 +275,29 @@ $("#copy").addEventListener("click", async () => {
   catch { prompt("이 링크를 복사해서 팀원에게 보내세요", link); }
   setTimeout(() => $("#copy").textContent = "초대 링크 공유", 1500);
 });
+
+// ---- 다른 기기에서 열기 (내 멤버십을 QR/링크로 옮기기) ----
+const QR_URL = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+$("#device-link").addEventListener("click", async () => {
+  const me = store.get(), box = $("#device-box");
+  const link = `${location.origin}${location.pathname}?c=${CODE}#me=${me.id}.${me.token}`;
+  $("#device-name").textContent = me.name;
+  $("#device-url").value = link;
+  box.hidden = false;
+  const qr = $("#device-qr"); qr.innerHTML = "";
+  try {
+    if (!window.QRCode) await new Promise((ok, fail) => {
+      const s = document.createElement("script"); s.src = QR_URL; s.onload = ok; s.onerror = fail; document.head.appendChild(s);
+    });
+    new QRCode(qr, { text: link, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+  } catch { qr.textContent = "QR을 만들지 못했어요. 아래 링크를 복사해서 휴대폰으로 보내 주세요."; }
+});
+$("#device-copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("#device-url").value); $("#device-copy").textContent = "복사됨"; }
+  catch { $("#device-url").select(); }
+  setTimeout(() => $("#device-copy").textContent = "복사", 1500);
+});
+$("#device-close").addEventListener("click", () => { $("#device-box").hidden = true; });
 
 // ---- 내 시간표 편집 ----
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
