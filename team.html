@@ -8,7 +8,7 @@
 </head>
 <body>
 <div class="wrap">
-  <p class="sub" style="margin-bottom:8px"><a href="./">← 홈</a></p>
+  <p class="sub" style="margin-bottom:8px"><a href="./">← 홈 (내 팀 목록)</a></p>
   <h1 id="team-name">불러오는 중…</h1>
   <p class="sub">초대 코드 <span class="code" id="code"></span>
     <button class="ghost" id="copy">링크 복사</button></p>
@@ -106,6 +106,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
+<script src="js/store.js"></script>
 <script src="js/timetable.js"></script>
 <script src="js/scheduler.js"></script>
 <script>
@@ -122,10 +123,9 @@ const showError = (el, err) => { el.className = "msg error"; el.textContent = er
 
 // ---- 내 멤버십 (브라우저에 저장) ----
 const store = {
-  all() { try { return JSON.parse(localStorage.getItem("tp.memberships") || "{}"); } catch { return {}; } },
-  get() { return this.all()[CODE]; },
-  set(m) { const a = this.all(); a[CODE] = m; try { localStorage.setItem("tp.memberships", JSON.stringify(a)); } catch {} },
-  clear() { const a = this.all(); delete a[CODE]; try { localStorage.setItem("tp.memberships", JSON.stringify(a)); } catch {} },
+  get: () => TP_STORE.getMembership(CODE),
+  set: (m) => TP_STORE.setMembership(CODE, m),
+  clear: () => TP_STORE.clearMembership(CODE),
 };
 
 let team = null;
@@ -142,6 +142,7 @@ async function load() {
   try { team = await TP_API.getTeam(CODE); }
   catch (e) { return fatal(e.message); }
   if (!team) return fatal("팀을 찾을 수 없습니다. 초대 코드를 확인해 주세요.");
+  TP_STORE.rememberTeam(team.code, team.name); // 홈 화면 '내 팀' 목록에 추가
 
   document.title = `${team.name} · 팀플 캘린더`;
   $("#team-name").textContent = team.name;

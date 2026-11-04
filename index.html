@@ -27,16 +27,17 @@
       <button>이동</button>
     </form>
     <p class="msg" id="join-msg"></p>
-  </div>
 
-  <div class="card" id="recent" hidden>
-    <h2>최근 참여한 팀</h2>
-    <div class="chips" id="recent-list"></div>
+    <div id="recent" hidden>
+      <h3 class="table-title">내 팀 <small>— 한 번 들어간 팀은 여기서 바로 들어갈 수 있어요</small></h3>
+      <ul class="team-list" id="recent-list"></ul>
+    </div>
   </div>
 </div>
 
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
+<script src="js/store.js"></script>
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
@@ -47,6 +48,7 @@ $("#create").addEventListener("submit", async (e) => {
   const msg = $("#create-msg"); msg.className = "msg"; msg.textContent = "만드는 중…";
   try {
     const t = await TP_API.createTeam(e.target.name.value.trim());
+    TP_STORE.rememberTeam(t.code, t.name);
     location.href = teamUrl(t.code);
   } catch (err) { msg.className = "msg error"; msg.textContent = err.message; }
 });
@@ -56,21 +58,30 @@ $("#join").addEventListener("submit", async (e) => {
   const code = e.target.code.value.trim().toUpperCase();
   const msg = $("#join-msg"); msg.className = "msg"; msg.textContent = "";
   try {
-    if (!await TP_API.getTeam(code)) throw new Error("팀을 찾을 수 없습니다. 초대 코드를 확인해 주세요.");
+    const t = await TP_API.getTeam(code);
+    if (!t) throw new Error("팀을 찾을 수 없습니다. 초대 코드를 확인해 주세요.");
+    TP_STORE.rememberTeam(t.code, t.name);
     location.href = teamUrl(code);
   } catch (err) { msg.className = "msg error"; msg.textContent = err.message; }
 });
 
-// 최근 팀 (이 브라우저에 저장된 멤버십)
-try {
-  const mine = JSON.parse(localStorage.getItem("tp.memberships") || "{}");
-  const codes = Object.keys(mine);
-  if (codes.length) {
-    $("#recent").hidden = false;
-    $("#recent-list").innerHTML = codes.map(c =>
-      `<a class="chip" href="${teamUrl(c)}">${esc(c)} · ${esc(mine[c].teamName)} (${esc(mine[c].name)})</a>`).join("");
-  }
-} catch {}
+// 내 팀 목록 (이 브라우저에 저장)
+function renderTeams() {
+  const teams = TP_STORE.teams();
+  $("#recent").hidden = !teams.length;
+  $("#recent-list").innerHTML = teams.map(t => `<li>
+    <a href="${teamUrl(t.code)}">
+      <b>${esc(t.name || "이름 없는 팀")}</b>
+      <span class="code-sm">${esc(t.code)}</span>
+      ${t.me ? `<span class="chip me">${esc(t.me)}(으)로 참여 중</span>` : `<span class="chip empty">보기만 함</span>`}
+    </a>
+    ${t.me ? "" : `<button class="ghost" data-forget="${esc(t.code)}" title="목록에서 지우기">×</button>`}
+  </li>`).join("");
+  document.querySelectorAll("[data-forget]").forEach(b => b.addEventListener("click", () => {
+    TP_STORE.forgetTeam(b.dataset.forget); renderTeams();
+  }));
+}
+renderTeams();
 
 if (!window.TP_CONFIG?.SUPABASE_URL) {
   $("#create-msg").className = "msg error";
