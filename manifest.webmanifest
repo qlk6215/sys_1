@@ -1,0 +1,16 @@
+{
+  "name": "팀플 캘린더",
+  "short_name": "팀플캘린더",
+  "description": "팀원 시간표를 모아서 모두 비는 시간을 찾아 줍니다.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#3b6fd6",
+  "lang": "ko",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

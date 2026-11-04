@@ -2,16 +2,24 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>팀플 캘린더</title>
+<meta name="theme-color" content="#3b6fd6">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="팀플캘린더">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 <div class="wrap">
   <p class="sub" style="margin-bottom:8px"><a href="./">← 홈 (내 팀 목록)</a></p>
   <h1 id="team-name">불러오는 중…</h1>
-  <p class="sub">초대 코드 <span class="code" id="code"></span>
-    <button class="ghost" id="copy">링크 복사</button></p>
+  <div class="team-head">
+    <span>초대 코드 <span class="code" id="code"></span></span>
+    <button id="copy">초대 링크 공유</button>
+  </div>
 
   <!-- 참여 -->
   <div class="card" id="join-card" hidden>
@@ -27,6 +35,7 @@
   <div class="card">
     <h2>팀 전체 <span class="chips" id="members" style="display:inline-flex;margin-left:8px"></span></h2>
     <div id="team-grid"></div>
+    <p class="cell-info" id="cell-info" hidden></p>
     <div class="legend">
       <span><i style="background:#d9f2e3"></i>모두 가능</span>
       <span><i style="background:#fde9c8"></i>1명 수업</span>
@@ -88,14 +97,17 @@
     <p class="msg" id="my-msg"></p>
 
     <div id="my-grid" style="margin-top:8px"></div>
-    <p class="legend">격자 드래그: 수업 추가 · 블록 클릭: 아래 표에서 수정 · ×: 삭제</p>
+    <p class="legend">
+      <span class="only-mouse">격자 드래그: 수업 추가 · 블록 클릭: 아래 표에서 수정 · ×: 삭제</span>
+      <span class="only-touch">빈 칸 탭: 1시간 수업 추가 · 블록 탭: 아래 표에서 수정 · ×: 삭제</span>
+    </p>
 
     <h3 class="table-title" id="slot-title" hidden>수업 목록 <small>— 과목명·요일·시간·강의실을 바로 고칠 수 있어요. 다 고치면 저장을 눌러 주세요.</small></h3>
     <table class="slots" id="slot-table" hidden>
       <thead><tr><th>과목</th><th>요일</th><th>시간</th><th>강의실</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
-    <div class="row" style="margin-top:12px">
+    <div class="savebar">
       <button class="primary" id="save" disabled>저장</button>
       <span class="msg" id="save-msg" style="margin:0"></span>
       <span style="flex:1"></span>
@@ -180,11 +192,17 @@ function renderTeamGrid() {
       const busy = TP_SCHEDULER.busyAt(team.members, d, t);
       const cls = team.members.length === 0 ? "" : busy.length === 0 ? "free" : `b${Math.min(busy.length, 4)}`;
       const title = busy.length ? `${t2(t)} 수업 중: ${busy.join(", ")}` : `${t2(t)} 모두 가능`;
-      html += `<div class="cell ${cls}" style="top:${(t - ds) / 60 * HOUR_PX}px;height:${HOUR_PX / 2}px" title="${esc(title)}"></div>`;
+      html += `<div class="cell ${cls}" data-day="${d}" style="top:${(t - ds) / 60 * HOUR_PX}px;height:${HOUR_PX / 2}px" title="${esc(title)}"></div>`;
     }
     html += "</div>";
   }
   $("#team-grid").innerHTML = html + "</div>";
+  // 휴대폰에는 마우스 오버(title)가 없으니, 칸을 누르면 누가 수업 중인지 아래에 보여 준다
+  $("#team-grid").querySelectorAll(".cell").forEach(c => c.addEventListener("click", () => {
+    const info = $("#cell-info");
+    info.hidden = false;
+    info.textContent = `${DAY_KO[c.dataset.day]}요일 ${c.title}`;
+  }));
 }
 
 function renderFree() {
@@ -222,9 +240,14 @@ $("#leave").addEventListener("click", async () => {
 });
 $("#copy").addEventListener("click", async () => {
   const link = `${location.origin}${location.pathname}?c=${CODE}`;
-  try { await navigator.clipboard.writeText(link); $("#copy").textContent = "복사됨"; }
+  // 휴대폰에서는 공유 시트(카톡 등)를 띄우고, 안 되면 클립보드에 복사
+  if (navigator.share) {
+    try { await navigator.share({ title: `${team.name} · 팀플 캘린더`, text: `팀플 시간 맞추기 (초대 코드 ${CODE})`, url: link }); return; }
+    catch (e) { if (e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(link); $("#copy").textContent = "링크 복사됨"; }
   catch { prompt("이 링크를 복사해서 팀원에게 보내세요", link); }
-  setTimeout(() => $("#copy").textContent = "링크 복사", 1500);
+  setTimeout(() => $("#copy").textContent = "초대 링크 공유", 1500);
 });
 
 // ---- 내 시간표 편집 ----
@@ -294,11 +317,25 @@ function renderMyGrid(color) {
   box.querySelectorAll(".col").forEach(col => {
     col.addEventListener("pointerdown", (e) => {
       if (e.target.closest(".slot")) return;
+      if (e.pointerType !== "mouse") {
+        // 터치: 드래그하면 화면 스크롤, 짧게 탭하면 그 자리에 1시간 수업 추가
+        const x0 = e.clientX, y0 = e.clientY, t0 = Date.now(), ac = new AbortController();
+        col.addEventListener("pointercancel", () => ac.abort(), { signal: ac.signal }); // 스크롤로 바뀐 경우
+        col.addEventListener("pointerup", (ev) => {
+          ac.abort();
+          if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > 10 || Date.now() - t0 > 600) return;
+          const y = ev.clientY - col.getBoundingClientRect().top;
+          const a = Math.min(de - 60, ds + Math.floor(y / HOUR_PX * 2) * 30);
+          mySlots.push({ name: `수업 ${mySlots.length + 1}`, day: col.dataset.day, start: t2(a), end: t2(a + 60), location: null });
+          markDirty();
+        }, { signal: ac.signal });
+        return;
+      }
       e.preventDefault();
       col.setPointerCapture(e.pointerId);
       const from = yToMin(col, e.clientY);
       const ghost = document.createElement("div");
-      ghost.className = "ghost";
+      ghost.className = "drag-ghost";
       col.appendChild(ghost);
       let a = from, b = from;
       const draw = () => {
