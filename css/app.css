@@ -1,0 +1,55 @@
+:root { --accent: #3b6fd6; --line: #e3e5ea; --muted: #6b7280; --bg: #fafafa; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, "Malgun Gothic", sans-serif; margin: 0; background: var(--bg); color: #1f2328; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 24px 16px 60px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 0 0 12px; }
+a { color: var(--accent); }
+.sub { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+input, select, button { font: inherit; padding: 8px 10px; border: 1px solid #cfd3da; border-radius: 8px; background: #fff; }
+input[type=time] { width: 110px; }
+button { cursor: pointer; }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+button:disabled { opacity: .5; cursor: default; }
+.msg { font-size: 14px; color: var(--muted); min-height: 20px; margin: 8px 0 0; }
+.msg.error { color: #c0392b; }
+.code { font: 600 28px/1 ui-monospace, monospace; letter-spacing: 4px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: #eef2fb; }
+.chip.me { background: var(--accent); color: #fff; }
+.chip.empty { background: #f3f4f6; color: var(--muted); }
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.tabs button { border-radius: 8px 8px 0 0; border-bottom: none; }
+.tabs button.on { background: #eef2fb; border-color: var(--accent); color: var(--accent); }
+.drop { border: 2px dashed #c7cbd3; border-radius: 10px; padding: 20px; text-align: center; color: var(--muted); }
+table.slots { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.slots td, table.slots th { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+table.slots button { padding: 2px 8px; }
+
+/* 주간 격자 */
+.grid { display: grid; grid-template-columns: 48px repeat(var(--days, 5), 1fr); border-top: 1px solid var(--line); font-size: 12px; }
+.grid .head { text-align: center; font-weight: 600; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.grid .col { position: relative; border-left: 1px solid var(--line); }
+.grid .hour { height: 40px; border-bottom: 1px solid #f0f1f3; color: #9aa0a8; font-size: 11px; padding-left: 2px; }
+.slot { position: absolute; left: 2px; right: 2px; border-radius: 6px; padding: 3px 5px; overflow: hidden; color: #fff; line-height: 1.25; }
+.slot small { display: block; opacity: .85; }
+.editor .col { cursor: crosshair; touch-action: none; user-select: none; }
+.editor .col::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0 39px, #f0f1f3 39px 40px); pointer-events: none; }
+.editor .slot { cursor: pointer; z-index: 1; }
+.editor .slot .x { position: absolute; top: 1px; right: 1px; padding: 0 5px; border: none; background: rgba(0,0,0,.2); color: #fff; border-radius: 4px; font-size: 12px; line-height: 16px; }
+.ghost { position: absolute; left: 2px; right: 2px; border-radius: 6px; background: rgba(59,111,214,.35); border: 1px dashed var(--accent); font-size: 11px; padding: 2px 4px; color: var(--accent); pointer-events: none; z-index: 2; }
+.cell { position: absolute; left: 0; right: 0; }
+.cell.free { background: #d9f2e3; }
+.cell.b1 { background: #fde9c8; }
+.cell.b2 { background: #f8c9a6; }
+.cell.b3 { background: #ee9d7e; }
+.cell.b4 { background: #d9705b; }
+.legend { display: flex; gap: 12px; font-size: 12px; color: var(--muted); margin: 8px 0 0; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
+.free-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.free-list li { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; background: #fff; }
+.free-list li b { color: var(--accent); }
+.free-list li small { color: var(--muted); display: block; }

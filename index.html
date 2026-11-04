@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>팀플 캘린더</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>팀플 캘린더</h1>
+  <p class="sub">팀원 시간표를 모아서 모두 비는 시간을 찾아 줍니다.</p>
+
+  <div class="card">
+    <h2>새 팀 만들기</h2>
+    <form class="row" id="create">
+      <input name="name" placeholder="팀 이름 (예: 소프트웨어공학 3조)" required maxlength="50" style="flex:1;min-width:200px">
+      <button class="primary">만들기</button>
+    </form>
+    <p class="msg" id="create-msg"></p>
+  </div>
+
+  <div class="card">
+    <h2>초대 코드로 참여</h2>
+    <form class="row" id="join">
+      <input name="code" placeholder="코드 6자리" required maxlength="6" style="width:140px;text-transform:uppercase">
+      <button>이동</button>
+    </form>
+    <p class="msg" id="join-msg"></p>
+  </div>
+
+  <div class="card" id="recent" hidden>
+    <h2>최근 참여한 팀</h2>
+    <div class="chips" id="recent-list"></div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+const teamUrl = (code) => `team.html?c=${encodeURIComponent(code)}`;
+
+$("#create").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = $("#create-msg"); msg.className = "msg"; msg.textContent = "만드는 중…";
+  try {
+    const t = await TP_API.createTeam(e.target.name.value.trim());
+    location.href = teamUrl(t.code);
+  } catch (err) { msg.className = "msg error"; msg.textContent = err.message; }
+});
+
+$("#join").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = e.target.code.value.trim().toUpperCase();
+  const msg = $("#join-msg"); msg.className = "msg"; msg.textContent = "";
+  try {
+    if (!await TP_API.getTeam(code)) throw new Error("팀을 찾을 수 없습니다. 초대 코드를 확인해 주세요.");
+    location.href = teamUrl(code);
+  } catch (err) { msg.className = "msg error"; msg.textContent = err.message; }
+});
+
+// 최근 팀 (이 브라우저에 저장된 멤버십)
+try {
+  const mine = JSON.parse(localStorage.getItem("tp.memberships") || "{}");
+  const codes = Object.keys(mine);
+  if (codes.length) {
+    $("#recent").hidden = false;
+    $("#recent-list").innerHTML = codes.map(c =>
+      `<a class="chip" href="${teamUrl(c)}">${esc(c)} · ${esc(mine[c].teamName)} (${esc(mine[c].name)})</a>`).join("");
+  }
+} catch {}
+
+if (!window.TP_CONFIG?.SUPABASE_URL) {
+  $("#create-msg").className = "msg error";
+  $("#create-msg").textContent = "js/config.js 에 Supabase URL과 키를 넣어야 사용할 수 있습니다.";
+}
+</script>
+</body>
+</html>
