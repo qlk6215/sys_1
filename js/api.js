@@ -30,5 +30,13 @@
     joinTeam: (code, name) => rpc("join_team", { p_code: code, p_name: name }),
     saveSlots: (memberId, token, slots) => rpc("save_slots", { p_member_id: memberId, p_token: token, p_slots: slots }),
     leaveTeam: (memberId, token) => rpc("leave_team", { p_member_id: memberId, p_token: token }),
+    proposeOption: (memberId, token, date, start, end) =>
+      rpc("propose_option", { p_member_id: memberId, p_token: token, p_date: date, p_start: start, p_end: end }),
+    voteOption: (memberId, token, optionId, vote) =>
+      rpc("vote_option", { p_member_id: memberId, p_token: token, p_option_id: optionId, p_vote: vote }),
+    confirmOption: (memberId, token, optionId) =>
+      rpc("confirm_option", { p_member_id: memberId, p_token: token, p_option_id: optionId }),
+    deleteOption: (memberId, token, optionId) =>
+      rpc("delete_option", { p_member_id: memberId, p_token: token, p_option_id: optionId }),
   };
 })();

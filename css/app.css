@@ -47,6 +47,55 @@ table.slots tr.flash { background: #fff4cc; transition: background .3s; }
 .table-title small { font-weight: 400; color: var(--muted); }
 .team-head { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin: 0 0 20px; color: var(--muted); font-size: 14px; }
 .team-head .code { color: #1f2328; }
+/* 주 선택 */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.card-head h2 { margin: 0; }
+.week-nav { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.week-nav button { padding: 4px 12px; font-size: 18px; line-height: 1; }
+.h-sub { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.grid .head small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); }
+.grid .head.today { color: var(--accent); }
+.grid .head.today small { color: var(--accent); font-weight: 600; }
+.grid .head.past, .grid .col.past { opacity: .45; }
+
+/* 빈 시간 */
+.filters { display: flex; gap: 8px 14px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; font-size: 14px; }
+.filters label { display: inline-flex; align-items: center; gap: 6px; }
+.free-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+button.mini { padding: 4px 10px; font-size: 13px; flex: none; border-color: var(--accent); color: var(--accent); }
+
+/* 투표 */
+.poll-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.poll { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; display: grid; gap: 6px; }
+.poll.confirmed { border-color: var(--accent); box-shadow: 0 0 0 3px #eef2fb; }
+.poll-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.poll-count { margin-left: auto; font-size: 13px; color: var(--muted); }
+.poll-votes { display: flex; gap: 4px 14px; flex-wrap: wrap; font-size: 13px; }
+.poll-votes .yes { color: #2f8a57; }
+.poll-votes .no { color: #c0392b; }
+.poll-votes .pending { color: var(--muted); }
+.poll .warn { color: #b26a00; }
+.poll-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.poll-actions button { padding: 5px 12px; font-size: 14px; }
+.poll-actions .on-yes { background: #2f8a57; border-color: #2f8a57; color: #fff; }
+.poll-actions .on-no { background: #c0392b; border-color: #c0392b; color: #fff; }
+
+/* 확정된 모임 */
+.confirmed-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+                  border-color: var(--accent); background: #f3f6fd; }
+.confirmed-main { display: flex; align-items: baseline; gap: 6px 10px; flex-wrap: wrap; }
+.confirmed-label { font-size: 13px; color: var(--accent); font-weight: 600; }
+.confirmed-time { font-size: 18px; }
+.confirmed-main small { color: var(--muted); }
+
+/* 개인 일정 */
+.slot.personal { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 6px, transparent 6px 12px); }
+table.slots tr.personal input[data-f="name"] { color: #4b5563; }
+table.slots .repeat { color: var(--muted); font-size: 12px; }
+table.slots input[type=date] { width: 140px; padding: 4px 6px; font-size: 14px; }
+.new-kind { font-size: 13px; color: var(--muted); margin-top: 8px; gap: 12px; }
+.new-kind label { display: inline-flex; align-items: center; gap: 4px; color: #1f2328; }
+
 .join-card { border-color: var(--accent); box-shadow: 0 0 0 3px #eef2fb; }
 .my-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .my-head h2 { margin: 0; }
@@ -118,8 +167,19 @@ input[type=file] { max-width: 100%; }
   table.slots tr { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--line); }
   table.slots td { border: none; padding: 0; min-width: 0; }
   table.slots td:nth-child(1) { grid-column: 1 / -1; }
-  table.slots td:nth-child(3) { grid-column: 2 / -1; display: flex; align-items: center; gap: 4px; }
+  table.slots td:nth-child(2) { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; }
+  table.slots td:nth-child(3) { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; }
   table.slots td:nth-child(4) { grid-column: 1 / 3; }
+  table.slots td:nth-child(1) select { flex: none; }
+  table.slots input[type=date] { flex: 1; width: 0; font-size: 16px; }
+  .filters { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .filters label { justify-content: space-between; white-space: nowrap; min-width: 0; }
+  .filters label select { min-width: 0; width: 60%; }
+  .filters label input[type=time] { flex: 1; min-width: 0; }
+  .free-list { grid-template-columns: 1fr; }
+  .filters label:last-child { grid-column: 1 / -1; }
+  .week-nav { width: 100%; justify-content: space-between; }
+  .confirmed-card button { width: 100%; }
   table.slots input, table.slots select { font-size: 16px; padding: 6px 8px; }
   table.slots input[data-f="name"], table.slots input[data-f="location"] { width: 100%; min-width: 0; }
   table.slots input[type=time] { flex: 1; width: 0; }

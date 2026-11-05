@@ -21,10 +21,13 @@
     <button id="copy">초대 링크 공유</button>
   </div>
 
+  <!-- 확정된 모임 -->
+  <div class="card confirmed-card" id="confirmed" hidden></div>
+
   <!-- 참여 -->
   <div class="card join-card" id="join-card" hidden>
     <h2>이 팀에 참여</h2>
-    <p class="msg" style="margin:0 0 10px">이름을 넣고 참여하면 <b>내 시간표 사진을 올릴 수 있어요.</b><br>
+    <p class="msg" style="margin:0 0 10px">이름을 넣고 참여하면 <b>내 시간표 사진을 올리고 모임 투표를 할 수 있어요.</b><br>
       <small>다른 기기(PC 등)에서 이미 참여했다면, 그 기기에서 <b>'다른 기기에서 열기'</b>를 눌러 나오는 QR/링크로 들어오세요.</small></p>
     <form class="row" id="join">
       <input name="name" placeholder="내 이름" required maxlength="30">
@@ -35,12 +38,19 @@
 
   <!-- 팀 겹쳐 보기 -->
   <div class="card">
-    <h2>팀 전체 <span class="chips" id="members" style="display:inline-flex;margin-left:8px"></span></h2>
+    <div class="card-head">
+      <h2>팀 전체 <span class="chips" id="members" style="display:inline-flex;margin-left:8px"></span></h2>
+      <div class="week-nav">
+        <button id="wk-prev" aria-label="이전 주">‹</button>
+        <b id="wk-label"></b>
+        <button id="wk-next" aria-label="다음 주">›</button>
+      </div>
+    </div>
     <div id="team-grid"></div>
     <p class="cell-info" id="cell-info" hidden></p>
     <div class="legend">
       <span><i style="background:#d9f2e3"></i>모두 가능</span>
-      <span><i style="background:#fde9c8"></i>1명 수업</span>
+      <span><i style="background:#fde9c8"></i>1명 일정</span>
       <span><i style="background:#f8c9a6"></i>2명</span>
       <span><i style="background:#ee9d7e"></i>3명</span>
       <span><i style="background:#d9705b"></i>4명 이상</span>
@@ -49,17 +59,26 @@
 
   <!-- 공통 빈 시간 -->
   <div class="card">
-    <h2>모일 수 있는 시간</h2>
-    <div class="row" style="margin-bottom:12px">
-      <label>최소 <select id="min-min">
+    <h2>모일 수 있는 시간 <small class="h-sub" id="free-week"></small></h2>
+    <div class="filters">
+      <label>회의 길이 <select id="min-min">
         <option value="30">30분</option><option value="60" selected>1시간</option>
         <option value="90">1시간 30분</option><option value="120">2시간</option></select></label>
       <label>빠져도 되는 인원 <select id="max-absent">
         <option value="0" selected>0명</option><option value="1">1명</option><option value="2">2명</option></select></label>
+      <label title="수업이 끝나고 모임 장소까지 이동하는 시간">수업 전후 여유 <select id="buffer">
+        <option value="0">없음</option><option value="10">10분</option><option value="15" selected>15분</option><option value="20">20분</option></select></label>
       <label><input type="time" id="day-start" value="09:00"> ~ <input type="time" id="day-end" value="21:00"></label>
     </div>
     <ul class="free-list" id="free"></ul>
     <p class="msg" id="free-msg"></p>
+  </div>
+
+  <!-- 모임 투표 -->
+  <div class="card" id="poll-card">
+    <h2>모임 투표</h2>
+    <ul class="poll-list" id="polls"></ul>
+    <p class="msg" id="poll-msg"></p>
   </div>
 
   <!-- 내 시간표 -->
@@ -81,7 +100,7 @@
     <div id="tab-upload">
       <div class="drop">
         <p>에브리타임 시간표 화면을 캡처해서 올려 주세요. (JPG/PNG)<br>
-          <small>사진은 이 브라우저 안에서만 분석되고 서버로 전송되지 않습니다.</small></p>
+          <small>사진은 이 브라우저 안에서만 분석되고 서버로 전송되지 않습니다. 알바 등 개인 일정은 그대로 유지돼요.</small></p>
         <div class="row" style="justify-content:center">
           <label>시간표 첫 줄 <select id="first-hour">
             <option value="8">8시</option><option value="9" selected>9시</option><option value="10">10시</option>
@@ -91,31 +110,39 @@
       </div>
     </div>
     <div id="tab-manual" hidden>
-      <p class="msg" style="margin:0 0 8px">아래 격자에서 <b>드래그</b>하면 수업이 추가됩니다. 정확한 시각은 이 양식으로 넣으세요.</p>
+      <p class="msg" style="margin:0 0 8px">수업, 알바·동아리 같은 개인 일정을 넣을 수 있어요. <b>날짜를 비우면 매주 반복</b>, 날짜를 넣으면 그날만 적용됩니다.</p>
       <form class="row" id="add-slot">
-        <input name="name" placeholder="과목명" required maxlength="50" style="width:160px">
+        <select name="kind"><option value="class">수업</option><option value="personal">개인 일정</option></select>
+        <input name="name" placeholder="이름 (과목·알바 등)" required maxlength="50" style="width:160px">
         <select name="day">
           <option value="MON">월</option><option value="TUE">화</option><option value="WED">수</option>
-          <option value="THU">목</option><option value="FRI">금</option><option value="SAT">토</option>
+          <option value="THU">목</option><option value="FRI">금</option><option value="SAT">토</option><option value="SUN">일</option>
         </select>
+        <input type="date" name="date" title="비우면 매주 반복">
         <input type="time" name="start" value="09:00" required>
         <span>~</span>
         <input type="time" name="end" value="10:00" required>
-        <input name="location" placeholder="강의실(선택)" maxlength="50" style="width:120px">
+        <input name="location" placeholder="장소(선택)" maxlength="50" style="width:120px">
         <button>추가</button>
       </form>
     </div>
     <p class="msg" id="my-msg"></p>
 
+    <div class="row new-kind">
+      <span>격자에 추가할 종류</span>
+      <label><input type="radio" name="new-kind" value="class" checked> 수업</label>
+      <label><input type="radio" name="new-kind" value="personal"> 개인 일정</label>
+    </div>
     <div id="my-grid" style="margin-top:8px"></div>
     <p class="legend">
-      <span class="only-mouse">격자 드래그: 수업 추가 · 블록 클릭: 아래 표에서 수정 · ×: 삭제</span>
-      <span class="only-touch">빈 칸 탭: 1시간 수업 추가 · 블록 탭: 아래 표에서 수정 · ×: 삭제</span>
+      <span class="only-mouse">격자 드래그: 추가 · 블록 클릭: 아래 표에서 수정 · ×: 삭제</span>
+      <span class="only-touch">빈 칸 탭: 1시간 추가 · 블록 탭: 아래 표에서 수정 · ×: 삭제</span>
+      <span>· 격자에는 매주 반복 일정만 보이고, 날짜 지정 일정은 아래 목록에 있어요</span>
     </p>
 
-    <h3 class="table-title" id="slot-title" hidden>수업 목록 <small>— 과목명·요일·시간·강의실을 바로 고칠 수 있어요. 다 고치면 저장을 눌러 주세요.</small></h3>
+    <h3 class="table-title" id="slot-title" hidden>일정 목록 <small>— 이름·종류·요일·날짜·시간·장소를 바로 고칠 수 있어요. 다 고치면 저장을 눌러 주세요.</small></h3>
     <table class="slots" id="slot-table" hidden>
-      <thead><tr><th>과목</th><th>요일</th><th>시간</th><th>강의실</th><th></th></tr></thead>
+      <thead><tr><th>이름</th><th>요일 / 날짜</th><th>시간</th><th>장소</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
     <div class="savebar">
@@ -136,13 +163,19 @@
 const $ = (s) => document.querySelector(s);
 // 초대 링크: team.html?c=CODE
 const CODE = (new URLSearchParams(location.search).get("c") || "").trim().toUpperCase();
-const DAYS = ["MON","TUE","WED","THU","FRI","SAT"];
+const S = TP_SCHEDULER;
+const DAYS = S.DAYS;
 const DAY_KO = {MON:"월",TUE:"화",WED:"수",THU:"목",FRI:"금",SAT:"토",SUN:"일"};
 const COLORS = ["#4a7bd0","#d0674a","#3f9d6b","#8a5cc2","#c79a2a","#2a9bb0","#c2507a"];
+const PERSONAL_COLOR = "#7d8590";
+const KIND_KO = { class: "수업", personal: "개인 일정" };
 const HOUR_PX = 40;
-const { toMin, toHHMM: t2 } = TP_SCHEDULER;
+const MAX_WEEK = 8; // 몇 주 뒤까지 볼 수 있는지
+const { toMin, toHHMM: t2 } = S;
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const showError = (el, err) => { el.className = "msg error"; el.textContent = err.message || String(err); };
+const md = (date) => { const d = S.parseYmd(date); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const fmtDate = (date) => `${md(date)}(${DAY_KO[S.dayOf(date)]})`;
 
 // ---- 내 멤버십 (브라우저에 저장) ----
 const store = {
@@ -152,8 +185,10 @@ const store = {
 };
 
 let team = null;
-let mySlots = [];      // 편집 중인 내 수업 목록
+let me = null;         // 이 브라우저의 멤버십 (참여 안 했으면 null)
+let mySlots = [];      // 편집 중인 내 일정 목록
 let dirty = false;
+let week = 0;          // 0 = 이번 주
 
 function fatal(message) {
   document.querySelector(".wrap").innerHTML = `<p class="msg error">${esc(message)}</p><p><a href="./">홈으로</a></p>`;
@@ -174,73 +209,220 @@ async function load() {
   if (!CODE) return fatal("초대 코드가 없습니다.");
   try { team = await TP_API.getTeam(CODE); }
   catch (e) { return fatal(e.message); }
-  if (team) takeDeviceLink();
   if (!team) return fatal("팀을 찾을 수 없습니다. 초대 코드를 확인해 주세요.");
+  takeDeviceLink();
   TP_STORE.rememberTeam(team.code, team.name); // 홈 화면 '내 팀' 목록에 추가
+  team.options ??= [];
 
   document.title = `${team.name} · 팀플 캘린더`;
   $("#team-name").textContent = team.name;
   $("#code").textContent = team.code;
 
-  let me = store.get();
+  me = store.get();
   if (me && !team.members.some(m => m.id === me.id)) { store.clear(); me = null; }
   $("#join-card").hidden = !!me;
   $("#my-card").hidden = !me;
   if (me) {
     $("#my-name").textContent = me.name;
-    if (!dirty) { mySlots = team.members.find(m => m.id === me.id).slots.map(s => ({...s})); renderMySlots(); }
+    if (!dirty) { mySlots = team.members.find(m => m.id === me.id).slots.map(s => ({ kind: "class", date: null, ...s })); renderMySlots(); }
   }
 
   $("#members").innerHTML = team.members.length
     ? team.members.map(m => `<span class="chip ${me && m.id === me.id ? "me" : ""}">${esc(m.name)}${m.slots.length ? "" : " (미입력)"}</span>`).join("")
     : `<span class="chip empty">아직 팀원이 없습니다</span>`;
 
+  renderWeek();
+  renderPolls();
+  renderConfirmed();
+}
+
+// ---- 주 선택 ----
+function weekDays() {
+  // 월~금은 항상, 토·일은 그날 일정이 있는 팀원이 있을 때만
+  return S.weekDates(week).filter(({ day, date }, i) =>
+    i < 5 || team.members.some(m => S.slotsOn(m, day, date).length));
+}
+function renderWeek() {
+  const all = S.weekDates(week);
+  $("#wk-label").textContent = `${week === 0 ? "이번 주" : week === 1 ? "다음 주" : `${week}주 뒤`} (${md(all[0].date)}~${md(all[4].date)})`;
+  $("#wk-prev").disabled = week <= 0;
+  $("#wk-next").disabled = week >= MAX_WEEK;
+  $("#free-week").textContent = $("#wk-label").textContent;
   renderTeamGrid();
   renderFree();
 }
+$("#wk-prev").addEventListener("click", () => { if (week > 0) { week--; renderWeek(); } });
+$("#wk-next").addEventListener("click", () => { if (week < MAX_WEEK) { week++; renderWeek(); } });
 
 // ---- 팀 겹쳐 보기 ----
 function renderTeamGrid() {
   const ds = toMin($("#day-start").value || "09:00"), de = toMin($("#day-end").value || "21:00");
   const hours = (de - ds) / 60;
-  const days = team.members.some(m => m.slots.some(s => s.day === "SAT")) ? DAYS : DAYS.slice(0, 5);
+  const days = weekDays(), today = S.today();
   let html = `<div class="grid" style="--days:${days.length}"><div class="head"></div>` +
-    days.map(d => `<div class="head">${DAY_KO[d]}</div>`).join("");
+    days.map(({ day, date }) => `<div class="head ${date < today ? "past" : ""} ${date === today ? "today" : ""}">${DAY_KO[day]}<small>${md(date)}</small></div>`).join("");
   html += "<div>" + Array.from({length: Math.ceil(hours)}, (_, i) => `<div class="hour">${Math.floor(ds / 60) + i}</div>`).join("") + "</div>";
-  for (const d of days) {
-    html += `<div class="col" style="height:${hours * HOUR_PX}px">`;
-    // 30분 칸마다 수업 중인 인원 수
-    for (let t = ds; t < de; t += TP_SCHEDULER.STEP) {
-      const busy = TP_SCHEDULER.busyAt(team.members, d, t);
+  for (const { day, date } of days) {
+    html += `<div class="col ${date < today ? "past" : ""}" style="height:${hours * HOUR_PX}px">`;
+    // 30분 칸마다 일정 있는 인원 수
+    for (let t = ds; t < de; t += S.STEP) {
+      const busy = S.busyAt(team.members, day, t, { date });
       const cls = team.members.length === 0 ? "" : busy.length === 0 ? "free" : `b${Math.min(busy.length, 4)}`;
-      const title = busy.length ? `${t2(t)} 수업 중: ${busy.join(", ")}` : `${t2(t)} 모두 가능`;
-      html += `<div class="cell ${cls}" data-day="${d}" style="top:${(t - ds) / 60 * HOUR_PX}px;height:${HOUR_PX / 2}px" title="${esc(title)}"></div>`;
+      const title = busy.length ? `${t2(t)} 일정 있음: ${busy.join(", ")}` : `${t2(t)} 모두 가능`;
+      html += `<div class="cell ${cls}" data-date="${date}" style="top:${(t - ds) / 60 * HOUR_PX}px;height:${HOUR_PX / 2}px" title="${esc(title)}"></div>`;
     }
     html += "</div>";
   }
   $("#team-grid").innerHTML = html + "</div>";
-  // 휴대폰에는 마우스 오버(title)가 없으니, 칸을 누르면 누가 수업 중인지 아래에 보여 준다
+  // 휴대폰에는 마우스 오버(title)가 없으니, 칸을 누르면 누가 일정이 있는지 아래에 보여 준다
   $("#team-grid").querySelectorAll(".cell").forEach(c => c.addEventListener("click", () => {
     const info = $("#cell-info");
     info.hidden = false;
-    info.textContent = `${DAY_KO[c.dataset.day]}요일 ${c.title}`;
+    info.textContent = `${fmtDate(c.dataset.date)} ${c.title}`;
   }));
 }
 
+// ---- 공통 빈 시간 ----
+let freeList = [];
 function renderFree() {
   const msg = $("#free-msg"); msg.className = "msg";
   if (!team.members.length) { $("#free").innerHTML = ""; msg.textContent = "팀원이 참여하면 여기에 모일 수 있는 시간이 표시됩니다."; return; }
-  const list = TP_SCHEDULER.freeBlocks(team.members, {
-    minMinutes: +$("#min-min").value, maxAbsent: +$("#max-absent").value,
+  const today = S.today();
+  freeList = S.freeBlocks(team.members, {
+    dates: weekDays().filter(d => d.date >= today), // 지난 날짜는 제외
+    minMinutes: +$("#min-min").value, maxAbsent: +$("#max-absent").value, buffer: +$("#buffer").value,
     dayStart: $("#day-start").value || "09:00", dayEnd: $("#day-end").value || "21:00",
   });
   const missing = team.members.filter(m => !m.slots.length).map(m => m.name);
-  msg.textContent = missing.length ? `${missing.join(", ")} 님은 아직 시간표를 입력하지 않아 항상 가능으로 계산됩니다.` : "";
-  $("#free").innerHTML = list.length
-    ? list.map(b => `<li><b>${DAY_KO[b.day]}</b> ${b.start} ~ ${b.end} <small>${b.minutes}분${b.absent.length ? " · 불참: " + esc(b.absent.join(", ")) : ""}</small></li>`).join("")
-    : `<li>조건에 맞는 시간이 없습니다. 최소 시간을 줄이거나 빠져도 되는 인원을 늘려 보세요.</li>`;
+  msg.textContent = (missing.length ? `${missing.join(", ")} 님은 아직 시간표를 입력하지 않아 항상 가능으로 계산됩니다. ` : "")
+    + (me ? "마음에 드는 시간의 [후보로]를 누르면 아래 모임 투표에 올라가요." : "");
+  $("#free").innerHTML = freeList.length
+    ? freeList.map((b, i) => `<li>
+        <div><b>${fmtDate(b.date)}</b> ${b.start} ~ ${b.end}
+          <small>${b.minutes}분${b.absent.length ? " · 불참: " + esc(b.absent.join(", ")) : ""}</small></div>
+        ${me ? `<button class="mini" data-propose="${i}">후보로</button>` : ""}
+      </li>`).join("")
+    : `<li>조건에 맞는 시간이 없습니다. 다른 주를 보거나, 회의 길이를 줄이거나, 빠져도 되는 인원을 늘려 보세요.</li>`;
+  $("#free").querySelectorAll("[data-propose]").forEach(b => b.addEventListener("click", () => propose(freeList[+b.dataset.propose])));
 }
-["#min-min", "#max-absent", "#day-start", "#day-end"].forEach(s => $(s).addEventListener("change", () => { renderTeamGrid(); renderFree(); }));
+["#min-min", "#max-absent", "#buffer", "#day-start", "#day-end"].forEach(s => $(s).addEventListener("change", () => { renderTeamGrid(); renderFree(); }));
+
+// ---- 모임 투표 ----
+async function propose(block) {
+  const len = +$("#min-min").value;
+  let start = block.start;
+  if (block.minutes > len) {
+    const latest = t2(toMin(block.end) - len);
+    const v = prompt(`${fmtDate(block.date)} ${block.start}~${block.end} 사이에서 시작 시각을 정해 주세요. (회의 ${len}분, ${block.start}~${latest} 사이)`, block.start);
+    if (v === null) return;
+    start = v.trim().replace(/^(\d):/, "0$1:");
+    if (!/^\d{2}:\d{2}$/.test(start) || toMin(start) < toMin(block.start) || toMin(start) > toMin(latest)) {
+      return showError($("#poll-msg"), new Error(`시작 시각은 ${block.start}~${latest} 사이여야 합니다.`));
+    }
+  }
+  try {
+    await TP_API.proposeOption(me.id, me.token, block.date, start, t2(toMin(start) + len));
+    await load();
+    $("#poll-card").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) { showError($("#poll-msg"), err); }
+}
+
+const optionLabel = (o) => `${fmtDate(o.date)} ${o.start}~${o.end}`;
+const nameOf = (id) => team.members.find(m => m.id === id)?.name ?? "(나간 팀원)";
+
+function renderPolls() {
+  const list = $("#polls"), msg = $("#poll-msg");
+  msg.className = "msg";
+  if (!team.options.length) {
+    list.innerHTML = "";
+    msg.textContent = me ? "아직 후보가 없어요. 위 '모일 수 있는 시간'에서 [후보로]를 눌러 올려 보세요." : "아직 후보가 없어요. 팀에 참여하면 후보를 올리고 투표할 수 있어요.";
+    return;
+  }
+  msg.textContent = "";
+  list.innerHTML = team.options.map(o => {
+    const yes = o.votes.filter(v => v.vote === "yes").map(v => nameOf(v.member_id));
+    const no = o.votes.filter(v => v.vote === "no").map(v => nameOf(v.member_id));
+    const voted = new Set(o.votes.map(v => v.member_id));
+    const pending = team.members.filter(m => !voted.has(m.id)).map(m => m.name);
+    const conflict = S.busyAt(team.members, S.dayOf(o.date), toMin(o.start), { date: o.date, len: toMin(o.end) - toMin(o.start) });
+    const mine = me && o.votes.find(v => v.member_id === me.id)?.vote;
+    const confirmed = team.confirmed_option_id === o.id;
+    return `<li class="poll ${confirmed ? "confirmed" : ""}">
+      <div class="poll-top">
+        <b>${optionLabel(o)}</b>
+        ${confirmed ? `<span class="chip me">확정</span>` : ""}
+        <span class="poll-count">가능 ${yes.length}/${team.members.length}</span>
+      </div>
+      <div class="poll-votes">
+        <span class="yes">가능: ${yes.length ? esc(yes.join(", ")) : "-"}</span>
+        <span class="no">불가: ${no.length ? esc(no.join(", ")) : "-"}</span>
+        ${pending.length ? `<span class="pending">미응답: ${esc(pending.join(", "))}</span>` : ""}
+      </div>
+      ${conflict.length ? `<small class="warn">⚠ 시간표상 일정 있음: ${esc(conflict.join(", "))}</small>` : ""}
+      ${me ? `<div class="poll-actions">
+        <button class="${mine === "yes" ? "on-yes" : ""}" data-vote="yes" data-o="${o.id}">가능</button>
+        <button class="${mine === "no" ? "on-no" : ""}" data-vote="no" data-o="${o.id}">불가</button>
+        <span style="flex:1"></span>
+        ${confirmed ? `<button data-confirm="" data-o="${o.id}">확정 취소</button>`
+                    : `<button class="primary" data-confirm="${o.id}" data-o="${o.id}">이 시간으로 확정</button>`}
+        <button class="ghost" data-del="${o.id}" title="후보 지우기">삭제</button>
+      </div>` : ""}
+    </li>`;
+  }).join("");
+
+  const act = async (fn) => { try { await fn(); await load(); } catch (err) { showError(msg, err); } };
+  list.querySelectorAll("[data-vote]").forEach(b => b.addEventListener("click", () => {
+    const o = team.options.find(x => x.id === +b.dataset.o);
+    const mine = o.votes.find(v => v.member_id === me.id)?.vote;
+    act(() => TP_API.voteOption(me.id, me.token, o.id, mine === b.dataset.vote ? null : b.dataset.vote)); // 같은 버튼 다시 누르면 취소
+  }));
+  list.querySelectorAll("[data-confirm]").forEach(b => b.addEventListener("click", () =>
+    act(() => TP_API.confirmOption(me.id, me.token, b.dataset.confirm ? +b.dataset.confirm : null))));
+  list.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
+    const o = team.options.find(x => x.id === +b.dataset.del);
+    if (confirm(`${optionLabel(o)} 후보를 지울까요? 투표 내용도 함께 지워집니다.`)) act(() => TP_API.deleteOption(me.id, me.token, o.id));
+  }));
+}
+
+// ---- 확정된 모임 (맨 위 고정) ----
+function renderConfirmed() {
+  const box = $("#confirmed");
+  const o = team.options.find(x => x.id === team.confirmed_option_id);
+  box.hidden = !o;
+  if (!o) return;
+  const yes = o.votes.filter(v => v.vote === "yes").length;
+  box.innerHTML = `
+    <div class="confirmed-main">
+      <span class="confirmed-label">📌 확정된 모임</span>
+      <b class="confirmed-time">${optionLabel(o)}</b>
+      <small>가능 ${yes}/${team.members.length}명</small>
+    </div>
+    <button id="ics">캘린더에 추가</button>`;
+  $("#ics").addEventListener("click", () => downloadIcs(o));
+}
+
+// .ics 파일 → 구글/아이폰/삼성 캘린더에 추가
+function downloadIcs(o) {
+  const dt = (date, hhmm) => `${date.replace(/-/g, "")}T${hhmm.replace(":", "")}00`;
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  const icsText = (s) => s.replace(/[\\;,]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
+  const ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//teamplay-calendar//KO", "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:tp-${team.code}-${o.id}@teamplay-calendar`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;TZID=Asia/Seoul:${dt(o.date, o.start)}`,
+    `DTEND;TZID=Asia/Seoul:${dt(o.date, o.end)}`,
+    `SUMMARY:${icsText(`${team.name} 팀플 모임`)}`,
+    `DESCRIPTION:${icsText(`팀플 캘린더에서 확정한 모임입니다.\n${location.origin}${location.pathname}?c=${team.code}`)}`,
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
+  a.download = `${team.name}_모임_${o.date}.ics`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
 
 // ---- 참여 / 나가기 ----
 $("#join").addEventListener("submit", async (e) => {
@@ -257,8 +439,7 @@ $("#join").addEventListener("submit", async (e) => {
   } catch (err) { showError($("#join-msg"), err); }
 });
 $("#leave").addEventListener("click", async () => {
-  if (!confirm("팀에서 나가면 내 시간표도 삭제됩니다. 나갈까요?")) return;
-  const me = store.get();
+  if (!confirm("팀에서 나가면 내 일정과 투표도 삭제됩니다. 나갈까요?")) return;
   try {
     await TP_API.leaveTeam(me.id, me.token);
     store.clear(); dirty = false; load();
@@ -279,7 +460,7 @@ $("#copy").addEventListener("click", async () => {
 // ---- 다른 기기에서 열기 (내 멤버십을 QR/링크로 옮기기) ----
 const QR_URL = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
 $("#device-link").addEventListener("click", async () => {
-  const me = store.get(), box = $("#device-box");
+  const box = $("#device-box");
   const link = `${location.origin}${location.pathname}?c=${CODE}#me=${me.id}.${me.token}`;
   $("#device-name").textContent = me.name;
   $("#device-url").value = link;
@@ -306,19 +487,32 @@ document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click
   $("#tab-manual").hidden = b.dataset.tab !== "manual";
 }));
 
+function slotColors() {
+  const color = {};
+  mySlots.forEach(s => { if (s.kind !== "personal") color[s.name] ??= COLORS[Object.keys(color).length % COLORS.length]; });
+  return (s) => s.kind === "personal" ? PERSONAL_COLOR : color[s.name];
+}
+const newKind = () => document.querySelector('input[name="new-kind"]:checked').value;
+const newName = (kind) => `${kind === "personal" ? "개인 일정" : "수업"} ${mySlots.filter(s => s.kind === kind).length + 1}`;
+
 function renderMySlots() {
   const tb = $("#slot-table tbody");
   $("#slot-table").hidden = $("#slot-title").hidden = !mySlots.length;
-  const color = {};
-  mySlots.forEach(s => color[s.name] ??= COLORS[Object.keys(color).length % COLORS.length]);
+  const colorOf = slotColors();
+  // 매주 반복 일정 먼저(요일·시각 순), 그다음 날짜 지정 일정(날짜 순)
+  const order = (s) => s.date ? `1${s.date}${s.start}` : `0${DAYS.indexOf(s.day)}${s.start}`;
   tb.innerHTML = mySlots
     .map((s, i) => ({ s, i }))
-    .sort((a, b) => DAYS.indexOf(a.s.day) - DAYS.indexOf(b.s.day) || a.s.start.localeCompare(b.s.start))
-    .map(({ s, i }) => `<tr data-i="${i}">
-      <td><i class="swatch" style="background:${color[s.name]}"></i><input data-f="name" value="${esc(s.name)}" maxlength="50"></td>
-      <td><select data-f="day">${DAYS.map(d => `<option value="${d}" ${d === s.day ? "selected" : ""}>${DAY_KO[d]}</option>`).join("")}</select></td>
+    .sort((a, b) => order(a.s).localeCompare(order(b.s)))
+    .map(({ s, i }) => `<tr data-i="${i}" class="${s.kind === "personal" ? "personal" : ""}">
+      <td><i class="swatch" style="background:${colorOf(s)}"></i>
+        <select data-f="kind">${Object.entries(KIND_KO).map(([k, v]) => `<option value="${k}" ${k === s.kind ? "selected" : ""}>${v}</option>`).join("")}</select>
+        <input data-f="name" value="${esc(s.name)}" maxlength="50"></td>
+      <td class="nowrap"><select data-f="day" ${s.date ? "disabled" : ""}>${DAYS.map(d => `<option value="${d}" ${d === s.day ? "selected" : ""}>${DAY_KO[d]}</option>`).join("")}</select>
+        <input type="date" data-f="date" value="${s.date || ""}" title="비우면 매주 반복">
+        <small class="repeat">${s.date ? "그날만" : "매주"}</small></td>
       <td class="nowrap"><input type="time" data-f="start" value="${s.start}" step="300"> ~ <input type="time" data-f="end" value="${s.end}" step="300"></td>
-      <td><input data-f="location" value="${esc(s.location || "")}" placeholder="강의실" maxlength="50"></td>
+      <td><input data-f="location" value="${esc(s.location || "")}" placeholder="장소" maxlength="50"></td>
       <td><button data-del="${i}" title="삭제">삭제</button></td></tr>`).join("");
   tb.querySelectorAll("button[data-del]").forEach(b => b.addEventListener("click", () => { mySlots.splice(+b.dataset.del, 1); markDirty(); }));
   tb.querySelectorAll("[data-f]").forEach(el => el.addEventListener("change", () => {
@@ -329,19 +523,21 @@ function renderMySlots() {
       showError(msg, new Error("끝나는 시각이 시작 시각보다 늦어야 합니다.")); el.value = s[f]; return;
     }
     msg.className = "msg"; msg.textContent = "";
-    s[f] = f === "location" ? (v || null) : v;
+    if (f === "date") { s.date = v || null; if (s.date) s.day = S.dayOf(s.date); } // 날짜를 넣으면 요일은 날짜를 따라감
+    else s[f] = f === "location" ? (v || null) : v;
     markDirty();
   }));
   $("#save").disabled = !dirty;
-  renderMyGrid(color);
+  renderMyGrid(colorOf);
 }
 
-// ---- 내 시간표 격자 편집기 (드래그로 추가) ----
+// ---- 내 시간표 격자 편집기 (매주 반복 일정, 드래그로 추가) ----
 const SNAP_MIN = 15;
-function renderMyGrid(color) {
-  const days = mySlots.some(s => s.day === "SAT") ? DAYS : DAYS.slice(0, 5);
+function renderMyGrid(colorOf) {
+  const weekly = mySlots.filter(s => !s.date);
+  const days = DAYS.filter((d, i) => i < 5 || weekly.some(s => s.day === d));
   let ds = 9 * 60, de = 21 * 60;
-  mySlots.forEach(s => { ds = Math.min(ds, Math.floor(toMin(s.start) / 60) * 60); de = Math.max(de, Math.ceil(toMin(s.end) / 60) * 60); });
+  weekly.forEach(s => { ds = Math.min(ds, Math.floor(toMin(s.start) / 60) * 60); de = Math.max(de, Math.ceil(toMin(s.end) / 60) * 60); });
   const hours = (de - ds) / 60;
   let html = `<div class="grid editor" style="--days:${days.length}"><div class="head"></div>` +
     days.map(d => `<div class="head">${DAY_KO[d]}</div>`).join("");
@@ -349,8 +545,8 @@ function renderMyGrid(color) {
   for (const d of days) {
     html += `<div class="col" data-day="${d}" style="height:${hours * HOUR_PX}px">`;
     mySlots.forEach((s, i) => {
-      if (s.day !== d) return;
-      html += `<div class="slot" data-i="${i}" style="top:${(toMin(s.start) - ds) / 60 * HOUR_PX}px;height:${(toMin(s.end) - toMin(s.start)) / 60 * HOUR_PX}px;background:${color[s.name]}">
+      if (s.date || s.day !== d) return;
+      html += `<div class="slot ${s.kind === "personal" ? "personal" : ""}" data-i="${i}" style="top:${(toMin(s.start) - ds) / 60 * HOUR_PX}px;height:${(toMin(s.end) - toMin(s.start)) / 60 * HOUR_PX}px;background:${colorOf(s)}">
         <button class="x" data-i="${i}" title="삭제">×</button>${esc(s.name)}<small>${s.start}–${s.end}</small></div>`;
     });
     html += "</div>";
@@ -358,6 +554,11 @@ function renderMyGrid(color) {
   const box = $("#my-grid");
   box.innerHTML = html + "</div>";
 
+  const add = (day, a, b) => {
+    const kind = newKind();
+    mySlots.push({ name: newName(kind), kind, day, date: null, start: t2(a), end: t2(b), location: null });
+    markDirty();
+  };
   const yToMin = (col, clientY) => {
     const y = clientY - col.getBoundingClientRect().top;
     const m = ds + Math.round(y / HOUR_PX * 60 / SNAP_MIN) * SNAP_MIN;
@@ -367,7 +568,7 @@ function renderMyGrid(color) {
     col.addEventListener("pointerdown", (e) => {
       if (e.target.closest(".slot")) return;
       if (e.pointerType !== "mouse") {
-        // 터치: 드래그하면 화면 스크롤, 짧게 탭하면 그 자리에 1시간 수업 추가
+        // 터치: 드래그하면 화면 스크롤, 짧게 탭하면 그 자리에 1시간 일정 추가
         const x0 = e.clientX, y0 = e.clientY, t0 = Date.now(), ac = new AbortController();
         col.addEventListener("pointercancel", () => ac.abort(), { signal: ac.signal }); // 스크롤로 바뀐 경우
         col.addEventListener("pointerup", (ev) => {
@@ -375,8 +576,7 @@ function renderMyGrid(color) {
           if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > 10 || Date.now() - t0 > 600) return;
           const y = ev.clientY - col.getBoundingClientRect().top;
           const a = Math.min(de - 60, ds + Math.floor(y / HOUR_PX * 2) * 30);
-          mySlots.push({ name: `수업 ${mySlots.length + 1}`, day: col.dataset.day, start: t2(a), end: t2(a + 60), location: null });
-          markDirty();
+          add(col.dataset.day, a, a + 60);
         }, { signal: ac.signal });
         return;
       }
@@ -396,10 +596,7 @@ function renderMyGrid(color) {
       const up = () => {
         col.removeEventListener("pointermove", move);
         ghost.remove();
-        if (b - a >= SNAP_MIN) {
-          mySlots.push({ name: `수업 ${mySlots.length + 1}`, day: col.dataset.day, start: t2(a), end: t2(b), location: null });
-          markDirty();
-        }
+        if (b - a >= SNAP_MIN) add(col.dataset.day, a, b);
       };
       col.addEventListener("pointermove", move);
       col.addEventListener("pointerup", up, { once: true });
@@ -417,12 +614,20 @@ function renderMyGrid(color) {
 }
 function markDirty() { dirty = true; renderMySlots(); }
 
+// 날짜를 고르면 요일 칸은 그 날짜의 요일로 맞춘다
+$("#add-slot").date.addEventListener("change", (e) => {
+  const f = e.target.form;
+  f.day.disabled = !!e.target.value;
+  if (e.target.value) f.day.value = S.dayOf(e.target.value);
+});
 $("#add-slot").addEventListener("submit", (e) => {
   e.preventDefault();
   const f = e.target;
   if (toMin(f.end.value) <= toMin(f.start.value)) { showError($("#my-msg"), new Error("종료 시각이 시작보다 늦어야 합니다.")); return; }
   $("#my-msg").textContent = "";
-  mySlots.push({ name: f.name.value.trim(), day: f.day.value, start: f.start.value, end: f.end.value, location: f.location.value.trim() || null });
+  const date = f.date.value || null;
+  mySlots.push({ name: f.name.value.trim(), kind: f.kind.value, day: date ? S.dayOf(date) : f.day.value, date,
+                 start: f.start.value, end: f.end.value, location: f.location.value.trim() || null });
   f.name.value = ""; f.location.value = "";
   markDirty();
 });
@@ -439,17 +644,21 @@ $("#file").addEventListener("change", async (e) => {
           : "글자 인식 준비 중… (처음 한 번만 몇 초 걸려요)";
       },
     });
-    mySlots = r.classes; markDirty();
-    msg.innerHTML = `수업 ${r.classes.length}개를 찾았습니다. 아래 수업 목록에서 과목명·시간·강의실을 확인하고, 틀린 곳은 고친 뒤 저장해 주세요.` +
+    // 매주 반복 수업만 새 시간표로 바꾸고, 개인 일정·날짜 지정 일정은 그대로 둔다
+    const kept = mySlots.filter(s => s.kind === "personal" || s.date);
+    mySlots = kept.concat(r.classes.map(c => ({ ...c, kind: "class", date: null })));
+    markDirty();
+    msg.innerHTML = `수업 ${r.classes.length}개를 찾았습니다.${kept.length ? ` (개인 일정 ${kept.length}개는 그대로 뒀어요)` : ""} 아래 목록에서 과목명·시간·강의실을 확인하고, 틀린 곳은 고친 뒤 저장해 주세요.` +
       r.warnings.map(w => `<br>⚠ ${esc(w)}`).join("");
   } catch (err) { showError(msg, err); }
   e.target.value = "";
 });
 
 $("#save").addEventListener("click", async () => {
-  const me = store.get(); const msg = $("#save-msg"); msg.className = "msg";
+  const msg = $("#save-msg"); msg.className = "msg";
   try {
-    await TP_API.saveSlots(me.id, me.token, mySlots);
+    await TP_API.saveSlots(me.id, me.token, mySlots.map(({ name, day, start, end, location, kind, date }) =>
+      ({ name, day, start, end, location: location || null, kind: kind || "class", date: date || null })));
     dirty = false; msg.textContent = "저장했습니다."; load();
     setTimeout(() => msg.textContent = "", 2000);
   } catch (err) { showError(msg, err); }
