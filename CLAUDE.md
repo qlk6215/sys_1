@@ -28,7 +28,7 @@
 ## 로컬 실행
 
 ```
-cd C:\Users\v\teamplay-calendar
+cd C:\Users\v\Desktop\calander\teamplay-calendar
 python -m http.server 5500
 ```
 
