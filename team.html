@@ -256,12 +256,15 @@ $("#wk-next").addEventListener("click", () => { if (week < MAX_WEEK) { week++; r
 
 // ---- 팀 겹쳐 보기 ----
 function renderTeamGrid() {
-  const ds = toMin($("#day-start").value || "09:00"), de = toMin($("#day-end").value || "21:00");
+  const ds0 = toMin($("#day-start").value || "09:00"), de0 = toMin($("#day-end").value || "21:00");
+  if (de0 <= ds0) { $("#team-grid").innerHTML = `<p class="msg error">끝 시각이 시작 시각보다 늦어야 합니다. 위 '모일 수 있는 시간'의 시간 범위를 고쳐 주세요.</p>`; return; }
+  // 시각 눈금이 1시간 칸이라, 격자는 정시 단위로 넓혀 그려야 눈금과 칸이 맞는다
+  const ds = Math.floor(ds0 / 60) * 60, de = Math.ceil(de0 / 60) * 60;
   const hours = (de - ds) / 60;
   const days = weekDays(), today = S.today();
   let html = `<div class="grid" style="--days:${days.length}"><div class="head"></div>` +
     days.map(({ day, date }) => `<div class="head ${date < today ? "past" : ""} ${date === today ? "today" : ""}">${DAY_KO[day]}<small>${md(date)}</small></div>`).join("");
-  html += "<div>" + Array.from({length: Math.ceil(hours)}, (_, i) => `<div class="hour">${Math.floor(ds / 60) + i}</div>`).join("") + "</div>";
+  html += "<div>" + Array.from({length: hours}, (_, i) => `<div class="hour">${ds / 60 + i}</div>`).join("") + "</div>";
   for (const { day, date } of days) {
     html += `<div class="col ${date < today ? "past" : ""}" style="height:${hours * HOUR_PX}px">`;
     // 30분 칸마다 일정 있는 인원 수
@@ -403,16 +406,21 @@ function renderConfirmed() {
 
 // .ics 파일 → 구글/아이폰/삼성 캘린더에 추가
 function downloadIcs(o) {
-  const dt = (date, hhmm) => `${date.replace(/-/g, "")}T${hhmm.replace(":", "")}00`;
-  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  // VTIMEZONE 없이 TZID를 쓰면 일부 캘린더 앱이 시각을 틀리게 읽으므로 UTC(…Z)로 쓴다. 한국은 서머타임 없는 UTC+9
+  const utc = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  const dt = (date, hhmm) => {
+    const [y, m, d] = date.split("-").map(Number), [h, mi] = hhmm.split(":").map(Number);
+    return utc(new Date(Date.UTC(y, m - 1, d, h - 9, mi)));
+  };
+  const stamp = utc(new Date());
   const icsText = (s) => s.replace(/[\\;,]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
   const ics = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//teamplay-calendar//KO", "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:tp-${team.code}-${o.id}@teamplay-calendar`,
     `DTSTAMP:${stamp}`,
-    `DTSTART;TZID=Asia/Seoul:${dt(o.date, o.start)}`,
-    `DTEND;TZID=Asia/Seoul:${dt(o.date, o.end)}`,
+    `DTSTART:${dt(o.date, o.start)}`,
+    `DTEND:${dt(o.date, o.end)}`,
     `SUMMARY:${icsText(`${team.name} 팀플 모임`)}`,
     `DESCRIPTION:${icsText(`팀플 캘린더에서 확정한 모임입니다.\n${location.origin}${location.pathname}?c=${team.code}`)}`,
     "END:VEVENT", "END:VCALENDAR",
@@ -639,6 +647,7 @@ $("#file").addEventListener("change", async (e) => {
   try {
     const r = await TP_TIMETABLE.extractTimetable(file, +$("#first-hour").value, {
       onProgress: (status, p) => {
+        if (status === "recognizing text") return; // Tesseract가 블록마다 보내는 진행률. 이걸 '준비 중'으로 띄우면 문구가 깜빡인다
         msg.textContent = status === "과목명 읽는 중"
           ? `과목명 읽는 중… ${Math.round(p * 100)}%`
           : "글자 인식 준비 중… (처음 한 번만 몇 초 걸려요)";

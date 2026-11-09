@@ -19,7 +19,9 @@
       throw new Error("서버에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.");
     }
     const text = await res.text();
-    const body = text ? JSON.parse(text) : null;
+    let body = null;
+    try { body = text ? JSON.parse(text) : null; }
+    catch { throw new Error(`서버 응답을 읽지 못했습니다 (${res.status}). 잠시 뒤 다시 시도해 주세요.`); } // 서버가 멈췄을 때 오는 HTML 오류 페이지
     if (!res.ok) throw new Error(body?.message || `오류 (${res.status})`);
     return body;
   }
