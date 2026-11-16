@@ -13,7 +13,7 @@
 | 경로 | 역할 |
 | --- | --- |
 | `index.html` | 홈: 팀 만들기, 코드로 이동, '내 팀' 목록 |
-| `team.html` | 팀 페이지 전부. 화면 아래 탭 5개(팀·모임·업로드·편집·날짜별)로 나뉜다: `setView()`가 `body[data-view]`를 바꾸고, `data-view="..."`가 붙은 요소는 맞는 탭에서만 보인다(`css/app.css`). 페이지 스크립트가 파일 안에 있음 |
+| `team.html` | 팀 페이지 전부. 화면 아래 탭 5개(팀·모임·업로드·편집·월별)로 나뉜다: `setView()`가 `body[data-view]`를 바꾸고, `data-view="..."`가 붙은 요소는 맞는 탭에서만 보인다(`css/app.css`). 페이지 스크립트가 파일 안에 있음 |
 | `js/config.js` | Supabase URL과 publishable 키 |
 | `js/api.js` | `TP_API` — Supabase RPC 호출 래퍼 (`fetch` → `/rest/v1/rpc/<fn>`) |
 | `js/store.js` | `TP_STORE` — localStorage의 참여 정보(`tp.memberships`)와 열어 본 팀(`tp.visited`) |
