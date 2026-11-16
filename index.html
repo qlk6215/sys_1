@@ -1,45 +1,504 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-type="software" data-radius="soft" data-ground="sand" data-buttons="pill" data-motion>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>팀플 캘린더</title>
-<meta name="theme-color" content="#3b6fd6">
-<link rel="manifest" href="manifest.webmanifest">
+<title>팀플 캘린더: 대학생 팀플 모임 시간 찾기</title>
+<meta name="description" content="팀원이 에브리타임 시간표 캡처를 올리면 모두 비는 시간을 5분 단위로 찾고, 투표로 모임을 정합니다. 무료이고 가입이 없습니다.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="팀플 캘린더: 대학생 팀플 모임 시간 찾기">
+<meta property="og:description" content="시간표 캡처 한 장으로 팀원 모두 비는 시간을 찾고 투표로 정합니다.">
+<meta property="og:image" content="https://teamplay-calendar.vercel.app/share.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f7f9fa">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="팀플캘린더">
-<link rel="stylesheet" href="css/app.css">
+<link rel="canonical" href="https://teamplay-calendar.vercel.app/">
+<meta name="site-kind" content="software">
+<meta name="page-type" content="software">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400..500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/system.css">
+<link rel="stylesheet" href="assets/ui/cards.css">
+<link rel="stylesheet" href="assets/motion/motion.css">
+<link rel="stylesheet" href="assets/backgrounds/backgrounds.css">
+<link rel="stylesheet" href="assets/layout/layout.css">
+<link rel="stylesheet" href="assets/icons/icon.css">
+<style>
+:root {
+  --p-bg: #f7f9fa; --p-surface: #ecf0f2; --p-ink: #1f3038; --p-muted: #5d6b72;
+  --p-accent: #0d7480; --p-accent-ink: #ffffff; --p-action: #0d7480; --p-action-ink: #ffffff;
+  --p-inv-bg: #1f3038; --p-inv-surface: #2c3c44; --p-inv-ink: #f7f9fa; --p-inv-muted: #9ea7ab;
+  --p-inv-accent: #f7f9fa; --p-inv-accent-ink: #1f3038; --p-inv-action: #f7f9fa; --p-inv-action-ink: #1f3038;
+  --font-display: "Geist", system-ui, sans-serif;
+  --font-text: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.035em;
+  --display-tracking-xl: -0.045em;
+}
+</style>
+<link rel="stylesheet" href="assets/ui/base.css">
+<link rel="stylesheet" href="assets/ui/window/fragment.css">
+<link rel="stylesheet" href="assets/ui/calendar/fragment.css">
+<script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+<script src="assets/backgrounds/backgrounds.js"></script>
+<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+<link rel="modulepreload" href="assets/moments/moments.js">
+<link rel="modulepreload" href="assets/moments/lib.js">
+<link rel="modulepreload" href="assets/moments/pinned-chapters/moment.js">
+<!-- page CSS: only what sits inside a visual, plus the app-frame recipe and the team list -->
+<style>
+  /* 한글은 어절 단위로 줄을 바꾼다 (기본값은 글자 중간에서 끊음) */
+  html:lang(ko) { word-break: keep-all; overflow-wrap: break-word; }
+  /* close-word: 이름을 .wrap 좌우 끝까지. 한글 5자+공백 ≈ 5.05em 이라 폭/5.05 로 맞춤 */
+  .close__word { font-size: min(16.9vw, 248px); line-height: 1.12; white-space: nowrap; }
+  /* 본문 문단은 잉크색(7:1). 키트 첫 화면은 리드를 회색으로 두지만 본문 대비 기준에 못 미친다 */
+  .hero--centred .hero__lead { color: var(--ink); }
+
+  /* app-frame (sections-library.md, app-frame) */
+  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
+  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
+  .app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  .app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, var(--u-bg)); pointer-events: none; }
+  @media (min-width: 1024px) and (max-width: 1279px) { .app.ui { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
+  @media (max-width: 1023px) {
+    .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .app > .app__pane--list { max-height: 252px; }
+    .app > .app__pane--list::after { display: none; }
+    .app .ui-win__side { display: none; }
+    .app .ui-win__body { grid-template-columns: minmax(0, 1fr); }
+    .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid var(--u-line); }
+  }
+  @media (max-width: 639px) {
+    .app.ui { grid-template-rows: minmax(0, 1fr); }
+    .app > .app__pane--list { display: none; }
+    .app > .app__pane + .app__pane { border-top: 0; }
+  }
+
+  /* drawn team window in the hero */
+  .tp-win { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: 0 24px 48px -24px rgb(31 48 56 / .35); overflow: hidden; font: 400 13px/1.4 var(--font-text); text-align: left; }
+  .tp-win__bar { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--line); }
+  .tp-win__bar b { font-weight: 500; }
+  .tp-dots { display: inline-flex; gap: 6px; } .tp-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong, #cfd7db); }
+  .tp-sp { flex: 1; }
+  .tp-chip { padding: 2px 10px; border-radius: 99px; background: var(--bg); color: var(--muted); white-space: nowrap; }
+  .tp-win__body { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .tp-grid { display: grid; grid-template-columns: 28px repeat(5, minmax(0, 1fr)); gap: 3px; padding: var(--s-4); border-right: 1px solid var(--line); }
+  .tp-grid > span { height: 22px; border-radius: 4px; }
+  .tp-grid > .h { height: auto; text-align: center; color: var(--muted); font-weight: 500; }
+  .tp-grid > .t { height: 22px; color: var(--muted); font-size: 13px; line-height: 22px; }
+  .tp-grid > .f { background: #d9f2e3; } .tp-grid > .b1 { background: #fde9c8; } .tp-grid > .b2 { background: #f8c9a6; } .tp-grid > .b3 { background: #ee9d7e; }
+  .tp-free { display: grid; align-content: start; gap: var(--s-2); padding: var(--s-4); }
+  .tp-free__h { margin: 0 0 var(--s-1); font-weight: 500; }
+  .tp-slot { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-3); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg); }
+  .tp-slot > span { display: grid; flex: 1; min-width: 0; }
+  .tp-slot b { font-weight: 500; color: var(--accent); }
+  .tp-slot small { color: var(--muted); font-size: 13px; }
+  .tp-slot i { font-style: normal; padding: 3px 10px; border-radius: 99px; background: var(--accent); color: var(--accent-ink, #fff); font-weight: 500; white-space: nowrap; }
+  .tp-slot.is-on { border-color: var(--accent); }
+  @media (max-width: 639px) { .tp-win__body { grid-template-columns: minmax(0, 1fr); } .tp-grid { display: none; } .tp-win__bar .tp-chip { display: none; } }
+
+  /* 고정 스크롤이 꺼진 휴대폰에서도 3단계 섹션은 2화면 (다음 섹션이 비쳐 보이지 않게) */
+  @media (max-width: 639px) {
+    main > #how[data-moment]:not(.is-live) { min-height: 200svh; }
+    #how .mo-pc__visual.mo-pc__visual--lit { aspect-ratio: 1 / 1; }   /* 그림을 키워 2화면을 내용으로 채움 */
+    #how .tp-week { height: 150px; }
+  }
+
+  /* drawn screens inside the three steps */
+  .tp-card { width: 100%; max-width: 440px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: 0 18px 40px -24px rgb(31 48 56 / .4); padding: var(--s-5); display: grid; gap: var(--s-3); font: 400 14px/1.45 var(--font-text); overflow: hidden; max-height: 100%; }
+  .tp-card__h { display: flex; align-items: center; gap: var(--s-2); font-weight: 500; }
+  .tp-card__h small { margin-left: auto; color: var(--muted); font-weight: 400; font-size: 13px; }
+  .tp-week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; height: 150px; position: relative; }
+  .tp-week > span { position: relative; border-radius: 6px; background: var(--bg); }
+  /* 일정 블록: 옅은 바탕 + 왼쪽 색 띠 (개인 일정은 회색 점선 띠) */
+  .tp-week i { --c: #3a66b8; position: absolute; left: 3px; right: 3px; border-radius: 4px; background: color-mix(in srgb, var(--c) 15%, transparent); border-left: 3px solid var(--c); color: var(--c); font: 500 13px/1.2 var(--font-text); font-style: normal; padding: 3px 5px; overflow: hidden; }
+  .tp-week i.p { --c: #59616b; border-left-style: dashed; }
+  .tp-toast { padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--bg); color: var(--ink); }
+  .tp-toast b { color: var(--accent); font-weight: 500; }
+  .tp-filters { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+  .tp-filters span { padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  .tp-filters b { color: var(--ink); font-weight: 500; }
+  .tp-poll { display: grid; gap: var(--s-2); padding: var(--s-3); border: 1px solid var(--accent); border-radius: var(--r-md); box-shadow: 0 0 0 3px rgb(13 116 128 / .12); }
+  .tp-poll__top { display: flex; align-items: center; gap: var(--s-2); }
+  .tp-poll__top em { font-style: normal; padding: 1px 8px; border-radius: 99px; background: var(--accent); color: #fff; font-size: 13px; }
+  .tp-poll__top small { margin-left: auto; color: var(--muted); font-size: 13px; }
+  .tp-yes { color: #1f7a4d; font-size: 13px; } .tp-no { color: var(--muted); font-size: 13px; }
+  .tp-btns { display: flex; gap: var(--s-2); }
+  .tp-btns span { padding: 5px 14px; border-radius: 99px; background: var(--bg); font-weight: 500; }
+  .tp-btns span.on { background: var(--accent); color: #fff; }
+  .tp-btns span.cal { margin-left: auto; }
+  .tp-code { font: 500 32px/1 var(--font-mono); letter-spacing: .16em; }
+  .tp-link { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg); }
+  .tp-link span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 13px; }
+  .tp-link i { font-style: normal; padding: 3px 12px; border-radius: 99px; background: var(--accent); color: #fff; font-weight: 500; }
+  .tp-device { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: var(--s-5); }
+  .tp-device .tp-card__h { grid-column: 1 / -1; }
+  .tp-device svg { display: block; padding: 6px; background: var(--surface); border-radius: var(--r-sm); }
+  .tp-device p { margin: 0; color: var(--ink); }
+  @media (max-width: 639px) { .tp-card { padding: var(--s-4); gap: var(--s-2); } .tp-week { height: 96px; } .tp-week i { font-size: 0; padding: 0; } .tp-card .tp-hide-sm { display: none; } }
+
+  /* drawn editor in the personal-schedule split */
+  .tp-editor { width: 600px; }
+  .tp-editor .tp-week { height: 260px; }
+  .tp-list { display: grid; gap: 0; border-top: 1px solid var(--line); }
+  .tp-list span { display: flex; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--line); }
+  .tp-list small { margin-left: auto; color: var(--muted); font-size: 13px; }
+  .tp-sw { width: 10px; height: 10px; border-radius: 3px; align-self: center; flex: none; }
+
+  /* the team list from this browser (localStorage) */
+  #my-teams .rows li { display: flex; align-items: center; gap: var(--s-3); min-height: 56px; }
+  #my-teams .rows a { flex: 1; min-height: 44px; display: flex; align-items: center; gap: var(--s-3); color: var(--ink); text-decoration: none; font-weight: 500; }
+  #my-teams .rows a:hover { text-decoration: underline; }
+  #my-teams .rows .rows__value { color: var(--muted); font: 400 var(--t-small)/1.4 var(--font-mono); white-space: nowrap; }
+  #my-teams .forget { min-width: 44px; min-height: 44px; border: 0; background: none; color: var(--muted); font-size: 20px; border-radius: var(--r-sm); cursor: pointer; }
+  .start-panel { display: grid; gap: var(--s-7); align-content: start; }
+  .start-panel .form { grid-template-columns: minmax(0, 1fr); }
+  .start-panel .form + .form { padding-top: var(--s-7); border-top: 1px solid var(--line); }
+  .start-panel h3 { font: 500 var(--t-lead)/1.3 var(--font-text); }
+  @media (max-width: 639px) { .start-panel { gap: var(--s-6); } .start-panel .form + .form { padding-top: var(--s-6); } }
+</style>
 </head>
 <body>
-<div class="wrap">
-  <h1>팀플 캘린더</h1>
-  <p class="sub">팀원 시간표를 모아서 모두 비는 시간을 찾아 줍니다.</p>
+<!-- type: software
+     deal: hero centred, nav nav-centre (nav-cards dealt first; it needs two to four products with their own screens, this is one app, so dealt again from its list: nav-centre), close close-word, footer footer-columns, rhythm space, buttons pill, mark initial, ground sand, grounds none
+     palette cool-white-slate (an off-white page and a calm teal: a quiet study planner students open between classes), type geist
+     effect: fluted-glass in the hero window
+     moments: pinned-chapters in #how -->
 
-  <div class="card">
-    <h2>새 팀 만들기</h2>
-    <form class="row" id="create">
-      <input name="name" placeholder="팀 이름 (예: 소프트웨어공학 3조)" required maxlength="50" style="flex:1;min-width:200px">
-      <button class="primary">만들기</button>
-    </form>
-    <p class="msg" id="create-msg"></p>
+<header class="nav nav--centre">
+  <div class="wrap nav__bar">
+    <a class="skip-link" href="#top">본문으로 건너뛰기</a>
+    <a class="nav__logo" href="#top"><span class="mark mark--initial" aria-hidden="true">팀</span>팀플 캘린더</a>
+    <nav class="nav__links" aria-label="주 메뉴">
+      <div class="nav__item"><a class="nav__link" href="#team">미리보기</a></div>
+      <div class="nav__item"><a class="nav__link" href="#how">사용법</a></div>
+      <div class="nav__item"><a class="nav__link" href="#plans">일정</a></div>
+      <div class="nav__item"><a class="nav__link" href="#faq">질문</a></div>
+    </nav>
+    <div class="nav__actions">
+      <a class="btn btn--primary" href="#start">팀 만들기</a>
+    </div>
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="메뉴">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
   </div>
+</header>
 
-  <div class="card">
-    <h2>초대 코드로 참여</h2>
-    <form class="row" id="join">
-      <input name="code" placeholder="코드 6자리" required maxlength="6" style="width:140px;text-transform:uppercase">
-      <button>이동</button>
-    </form>
-    <p class="msg" id="join-msg"></p>
+<main id="top">
+  <section class="hero hero--centred" data-enter aria-labelledby="hero-h">
+    <div class="wrap"><div class="hero-text">
+      <div class="hero__c">
+        <a class="pill" href="#faq"><span>무료 · 가입 없음</span><span class="muted">6자리 코드로 참여</span></a>
+        <h1 id="hero-h">대학생 팀플 모임 시간 찾기</h1>
+        <p class="hero__lead">팀원이 에브리타임 시간표 캡처를 올리면 모두 비는 시간을 5분 단위로 찾아 줍니다. 마음에 드는 시간은 투표로 정하세요.</p>
+        <div class="btn-row">
+          <a class="btn btn--primary" href="#start">팀 만들기<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+          <a class="btn btn--secondary" href="#how">사용법 보기</a>
+        </div>
+      </div>
+      <div class="hero__window" data-fx="fluted-glass" data-fx-seed="7" role="img" aria-label="소프트웨어공학 3조의 이번 주 겹쳐 보기: 요일별로 팀원 일정이 겹친 시간과 모두 비는 시간, 그리고 모일 수 있는 시간 세 개">
+        <div class="ly-piece tp-win ui" aria-hidden="true">
+          <div class="tp-win__bar"><span class="tp-dots"><i></i><i></i><i></i></span><b>소프트웨어공학 3조</b><span class="tp-sp"></span><span class="tp-chip">이번 주 11/16 ~ 11/20</span></div>
+          <div class="tp-win__body">
+            <div class="tp-grid">
+              <span class="h"></span><span class="h">월</span><span class="h">화</span><span class="h">수</span><span class="h">목</span><span class="h">금</span>
+              <span class="t">9</span><span class="f"></span><span class="b1"></span><span class="f"></span><span class="f"></span><span class="f"></span>
+              <span class="t">10</span><span class="b2"></span><span class="b1"></span><span class="f"></span><span class="f"></span><span class="f"></span>
+              <span class="t">11</span><span class="b2"></span><span class="f"></span><span class="f"></span><span class="f"></span><span class="f"></span>
+              <span class="t">12</span><span class="f"></span><span class="f"></span><span class="f"></span><span class="f"></span><span class="f"></span>
+              <span class="t">13</span><span class="b1"></span><span class="f"></span><span class="b1"></span><span class="f"></span><span class="f"></span>
+              <span class="t">14</span><span class="b1"></span><span class="f"></span><span class="b1"></span><span class="f"></span><span class="f"></span>
+              <span class="t">15</span><span class="f"></span><span class="f"></span><span class="f"></span><span class="f"></span><span class="b1"></span>
+              <span class="t">16</span><span class="f"></span><span class="f"></span><span class="f"></span><span class="f"></span><span class="f"></span>
+            </div>
+            <div class="tp-free">
+              <p class="tp-free__h">모일 수 있는 시간</p>
+              <div class="tp-slot is-on"><span><b>11/18(수) 15:15 ~ 16:45</b><small>90분 · 모두 가능</small></span><i>후보로</i></div>
+              <div class="tp-slot"><span><b>11/19(목) 09:00 ~ 17:45</b><small>525분 · 모두 가능</small></span><i>후보로</i></div>
+              <div class="tp-slot"><span><b>11/20(금) 09:00 ~ 14:45</b><small>345분 · 모두 가능</small></span><i>후보로</i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
 
-    <div id="recent" hidden>
-      <h3 class="table-title">내 팀 <small>— 한 번 들어간 팀은 여기서 바로 들어갈 수 있어요</small></h3>
-      <ul class="team-list" id="recent-list"></ul>
+  <section class="section" id="team" aria-labelledby="team-h">
+    <div class="wrap">
+      <div class="grid grid--top">
+        <h2 id="team-h" class="span-5">팀원 시간표를 한 화면에 겹쳐 봅니다</h2>
+        <div class="span-6 start-7 stack-4">
+          <p class="t-lead">빈 시간은 날짜순 목록으로, 확정한 모임과 투표 중인 후보는 달력으로 보입니다. 이번 주부터 8주 뒤까지 넘겨 볼 수 있어요.</p>
+          <a class="link" href="#how">세 단계 살펴보기</a>
+        </div>
+      </div>
+      <div class="ui app fill" role="img" aria-label="팀 화면: 왼쪽은 이번 주와 다음 주에 모두 모일 수 있는 시간 목록, 오른쪽은 11월 달력에 확정된 모임과 투표 중인 후보" data-ui-pause-host>
+        <div class="app__pane app__pane--list">
+          <div class="ui ui-panel ui-win" data-ui="window" data-open="모두 가능" data-work="후보로 올리는 중" data-done="후보">
+            <div class="ui-win__bar">
+              <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="ui-win__crumb">소프트웨어공학 3조 <i>/</i> <b>빈 시간</b></span>
+              <span class="ui-spacer"></span>
+              <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">검색</span><span class="ui-kbd">/</span></span>
+            </div>
+            <div class="ui-win__body">
+              <nav class="ui-win__side" aria-hidden="true">
+                <span class="ui-win__nav is-on"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg>빈 시간<em>10</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 9h3l1 1.5h3l1-1.5h3"/><path d="M2.5 9 4 3.5h8L13.5 9v3.5h-11z"/></svg>후보<em>2</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg>확정<em>1</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="6" r="2.5"/><path d="M3.5 13.5c.6-2.3 2.4-3.5 4.5-3.5s3.9 1.2 4.5 3.5"/></svg>팀원<em>4</em></span>
+                <span class="ui-win__label">주</span>
+                <span class="ui-win__nav"><span class="ui-win__hash">#</span>이번 주</span>
+                <span class="ui-win__nav"><span class="ui-win__hash">#</span>다음 주</span>
+              </nav>
+              <div class="ui-win__main">
+                <div class="ui-win__cols" aria-hidden="true"><span>날짜</span><span>시간</span><span>상태</span><span>길이</span></div>
+                <ul class="ui-win__rows">
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">월</span><span class="ui-win__who">11/16(월)</span><span class="ui-win__sub">14:45 ~ 21:00</span><span class="ui-win__st" data-st>모두 가능</span><span class="ui-win__age">375분</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">화</span><span class="ui-win__who">11/17(화)</span><span class="ui-win__sub">10:45 ~ 21:00</span><span class="ui-win__st" data-st>모두 가능</span><span class="ui-win__age">615분</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">수</span><span class="ui-win__who">11/18(수)</span><span class="ui-win__sub">15:15 ~ 16:45</span><span class="ui-win__st is-done" data-st>후보</span><span class="ui-win__age">90분</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">수</span><span class="ui-win__who">11/18(수)</span><span class="ui-win__sub">19:15 ~ 21:00</span><span class="ui-win__st" data-st>모두 가능</span><span class="ui-win__age">105분</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">목</span><span class="ui-win__who">11/19(목)</span><span class="ui-win__sub">09:00 ~ 17:45</span><span class="ui-win__st is-done" data-st>후보</span><span class="ui-win__age">525분</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">금</span><span class="ui-win__who">11/20(금)</span><span class="ui-win__sub">09:00 ~ 14:45</span><span class="ui-win__st" data-st>모두 가능</span><span class="ui-win__age">345분</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">금</span><span class="ui-win__who">11/20(금)</span><span class="ui-win__sub">16:15 ~ 21:00</span><span class="ui-win__st is-you" data-st>1명 불참</span><span class="ui-win__age">285분</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">월</span><span class="ui-win__who">11/23(월)</span><span class="ui-win__sub">14:45 ~ 21:00</span><span class="ui-win__st" data-st>모두 가능</span><span class="ui-win__age">375분</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">화</span><span class="ui-win__who">11/24(화)</span><span class="ui-win__sub">10:45 ~ 21:00</span><span class="ui-win__st" data-st>모두 가능</span><span class="ui-win__age">615분</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">수</span><span class="ui-win__who">11/25(수)</span><span class="ui-win__sub">15:15 ~ 16:45</span><span class="ui-win__st is-you" data-st>1명 불참</span><span class="ui-win__age">90분</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="app__pane app__pane--open" data-ui-loop>
+          <div class="ui ui-panel ui-calendar" data-ui="calendar" data-start="16" data-end="20" data-month="11월">
+            <div class="ui-cal__head">
+              <div class="ui-cal__month">11월 <span>2026</span></div>
+              <span class="ui-spacer"></span>
+              <span class="ui-chip ui-chip--plain ui-chip--ink" data-cal-range>11월 16 – 20</span>
+              <span class="ui-cal__nav" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M10 4 6 8l4 4"/></svg></span>
+              <span class="ui-cal__nav" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m6 4 4 4-4 4"/></svg></span>
+            </div>
+            <div class="ui-cal__dow" aria-hidden="true"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span></div>
+            <div class="ui-cal__days">
+              <span class="ui-cal__d is-out"><b>26</b></span><span class="ui-cal__d is-out"><b>27</b></span><span class="ui-cal__d is-out"><b>28</b></span><span class="ui-cal__d is-out"><b>29</b></span><span class="ui-cal__d is-out"><b>30</b></span><span class="ui-cal__d is-out"><b>31</b></span><span class="ui-cal__d" data-d="1"><b>1</b></span>
+              <span class="ui-cal__d" data-d="2"><b>2</b></span><span class="ui-cal__d" data-d="3"><b>3</b></span><span class="ui-cal__d" data-d="4"><b>4</b></span><span class="ui-cal__d" data-d="5"><b>5</b></span><span class="ui-cal__d" data-d="6"><b>6</b></span><span class="ui-cal__d" data-d="7"><b>7</b></span><span class="ui-cal__d" data-d="8"><b>8</b></span>
+              <span class="ui-cal__d" data-d="9"><b>9</b></span><span class="ui-cal__d" data-d="10"><b>10</b></span><span class="ui-cal__d" data-d="11"><b>11</b></span><span class="ui-cal__d" data-d="12"><b>12</b></span><span class="ui-cal__d" data-d="13"><b>13</b></span><span class="ui-cal__d" data-d="14"><b>14</b></span><span class="ui-cal__d" data-d="15"><b>15</b></span>
+              <span class="ui-cal__d is-today is-start" data-d="16"><b>16</b></span><span class="ui-cal__d is-in" data-d="17"><b>17</b></span><span class="ui-cal__d is-in" data-d="18"><b>18</b></span><span class="ui-cal__d is-in" data-d="19"><b>19</b></span><span class="ui-cal__d is-end" data-d="20"><b>20</b></span><span class="ui-cal__d" data-d="21"><b>21</b></span><span class="ui-cal__d" data-d="22"><b>22</b></span>
+              <span class="ui-cal__d" data-d="23"><b>23</b></span><span class="ui-cal__d" data-d="24"><b>24</b></span><span class="ui-cal__d is-mark" data-d="25"><b>25</b></span><span class="ui-cal__d" data-d="26"><b>26</b></span><span class="ui-cal__d" data-d="27"><b>27</b></span><span class="ui-cal__d" data-d="28"><b>28</b></span><span class="ui-cal__d" data-d="29"><b>29</b></span>
+              <span class="ui-cal__d" data-d="30"><b>30</b></span><span class="ui-cal__d is-out"><b>1</b></span><span class="ui-cal__d is-out"><b>2</b></span><span class="ui-cal__d is-out"><b>3</b></span><span class="ui-cal__d is-out"><b>4</b></span><span class="ui-cal__d is-out"><b>5</b></span><span class="ui-cal__d is-out"><b>6</b></span>
+            </div>
+            <div class="ui-cal__events">
+              <div class="ui-cal__ev" data-ev="18">
+                <span class="ui-cal__date"><b>18</b></span>
+                <span class="ui-cal__evtext"><span class="ui-cal__evtitle">팀플 모임 확정</span><span class="ui-cal__evsub">수 15:30 ~ 16:30 · 가능 4/4</span></span>
+              </div>
+              <div class="ui-cal__ev" data-ev="19">
+                <span class="ui-cal__date"><b>19</b></span>
+                <span class="ui-cal__evtext"><span class="ui-cal__evtitle">후보 투표 중</span><span class="ui-cal__evsub">목 14:00 ~ 15:00 · 가능 3/4</span></span>
+              </div>
+              <div class="ui-cal__ev" data-ev="25">
+                <span class="ui-cal__date"><b>25</b></span>
+                <span class="ui-cal__evtext"><span class="ui-cal__evtitle">다음 주 후보</span><span class="ui-cal__evsub">수 15:15 ~ 16:15 · 가능 3/4</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how" style="--h: 2" data-moment="pinned-chapters" aria-labelledby="how-h">
+    <div class="wrap mo-pc__grid">
+      <div class="mo-pc__text">
+        <h2 id="how-h">시간표 한 장에서 모임 확정까지 3단계</h2>
+        <ol class="mo-pc__steps">
+          <li class="mo-pc__step">
+            <h3>에브리타임 시간표 올리기</h3>
+            <p>캡처를 올리면 수업 시간과 과목명을 브라우저 안에서 읽습니다. 사진은 서버로 보내지 않아요.</p>
+            <figure class="mo-pc__visual mo-pc__visual--lit">
+              <div class="tp-card ui" role="img" aria-label="내 시간표: 월요일 소프트웨어공학, 화요일 운영체제, 수요일 데이터베이스 수업과 목요일 알바가 칸에 들어간 모습">
+                <div class="tp-card__h">내 시간표<small>김범수</small></div>
+                <div class="tp-week" aria-hidden="true">
+                  <span><i style="top:22%;height:22%;--c:#3a66b8">소프트웨어공학</i></span>
+                  <span><i style="top:0;height:22%;--c:#b5523a">운영체제</i></span>
+                  <span><i style="top:44%;height:28%;--c:#2f7d55">데이터베이스</i></span>
+                  <span><i class="p" style="top:70%;height:30%">알바</i></span>
+                  <span><i style="top:30%;height:20%;--c:#8a6a1f">통계학</i></span>
+                </div>
+                <div class="tp-toast">수업 <b>5개</b>를 찾았습니다. 개인 일정은 그대로 뒀어요.</div>
+              </div>
+            </figure>
+          </li>
+          <li class="mo-pc__step">
+            <h3>모일 수 있는 시간 고르기</h3>
+            <p>회의 길이, 빠져도 되는 인원, 수업 전후 이동 여유를 정하면 빈 시간이 5분 단위로 나옵니다.</p>
+            <figure class="mo-pc__visual mo-pc__visual--lit">
+              <div class="tp-card ui" role="img" aria-label="조건: 회의 1시간, 빠져도 되는 인원 0명, 수업 전후 여유 15분. 그 아래 모일 수 있는 시간 세 개">
+                <div class="tp-card__h">모일 수 있는 시간<small>이번 주</small></div>
+                <div class="tp-filters" aria-hidden="true"><span>회의 <b>1시간</b></span><span>불참 <b>0명</b></span><span>여유 <b>15분</b></span></div>
+                <div class="tp-slot is-on" aria-hidden="true"><span><b>11/18(수) 15:15 ~ 16:45</b><small>90분 · 모두 가능</small></span><i>후보로</i></div>
+                <div class="tp-slot" aria-hidden="true"><span><b>11/19(목) 09:00 ~ 17:45</b><small>525분 · 모두 가능</small></span><i>후보로</i></div>
+                <div class="tp-slot tp-hide-sm" aria-hidden="true"><span><b>11/20(금) 09:00 ~ 14:45</b><small>345분 · 모두 가능</small></span><i>후보로</i></div>
+              </div>
+            </figure>
+          </li>
+          <li class="mo-pc__step">
+            <h3>투표로 확정하기</h3>
+            <p>마음에 드는 시간을 후보로 올리면 팀원이 가능·불가를 누릅니다. 확정한 모임은 휴대폰 캘린더에 넣을 수 있어요.</p>
+            <figure class="mo-pc__visual mo-pc__visual--lit">
+              <div class="tp-card ui" role="img" aria-label="모임 투표: 11월 18일 수요일 15시 30분부터 16시 30분, 네 명 모두 가능으로 확정, 캘린더에 추가 버튼">
+                <div class="tp-card__h">모임 투표<small>후보 2개</small></div>
+                <div class="tp-poll" aria-hidden="true">
+                  <div class="tp-poll__top"><b>11/18(수) 15:30 ~ 16:30</b><em>확정</em><small>가능 4/4</small></div>
+                  <span class="tp-yes">가능: 김범수, 이수민, 박지훈, 최유진</span>
+                  <div class="tp-btns"><span class="on">가능</span><span>불가</span><span class="cal">캘린더에 추가</span></div>
+                </div>
+                <div class="tp-poll tp-hide-sm" aria-hidden="true" style="border-color:var(--line);box-shadow:none">
+                  <div class="tp-poll__top"><b>11/19(목) 14:00 ~ 15:00</b><small>가능 3/4</small></div>
+                  <span class="tp-no">미응답: 최유진</span>
+                </div>
+              </div>
+            </figure>
+          </li>
+        </ol>
+      </div>
+      <div class="mo-pc__visuals frame"></div>
+    </div>
+  </section>
+
+  <section class="section" id="start" aria-labelledby="start-h">
+    <div class="wrap grid grid--top">
+      <div class="span-5 stack-6" id="my-teams">
+        <div class="section-head">
+          <h2 id="start-h">팀을 만들고 초대 링크를 보내세요</h2>
+          <p>팀 이름을 넣으면 6자리 초대 코드가 생깁니다. 링크를 단톡방에 보내면 팀원은 이름만 적고 들어옵니다.</p>
+        </div>
+        <div class="tp-card ui" role="img" aria-label="초대 링크 공유: 초대 코드 K7QH2M와 팀 링크, 복사 버튼">
+          <div class="tp-card__h">초대 링크</div>
+          <div class="tp-code" aria-hidden="true">K7QH2M</div>
+          <div class="tp-link" aria-hidden="true"><span>teamplay-calendar.vercel.app/team.html?c=K7QH2M</span><i>복사</i></div>
+        </div>
+        <div class="stack-3">
+          <p class="t-label muted">이 브라우저에서 들어간 팀</p>
+          <p class="muted" id="recent-empty">아직 없어요. 팀을 만들거나 코드로 들어가면 여기에 남습니다.</p>
+          <ul class="rows" id="recent-list" hidden></ul>
+          <p class="t-small muted" id="recent-more" hidden></p>
+        </div>
+      </div>
+      <div class="span-6 start-7 start-panel">
+        <form class="form" id="create" action="team.html" method="get" data-fix="{n}개 항목을 확인해 주세요" novalidate>
+          <h3>새 팀 만들기</h3>
+          <div class="field"><label for="f-team">팀 이름</label>
+            <input id="f-team" name="name" type="text" maxlength="50" autocomplete="off" required aria-describedby="f-team-err" placeholder="예: 소프트웨어공학 3조">
+            <p class="field__error" id="f-team-err" hidden>팀 이름을 1~50자로 적어 주세요.</p></div>
+          <div class="btn-row"><button class="btn btn--primary" type="submit">팀 만들기</button></div>
+          <p class="form__status" role="status" data-form-status></p>
+        </form>
+        <form class="form" id="join" action="team.html" method="get" data-fix="{n}개 항목을 확인해 주세요" novalidate>
+          <h3>초대 코드로 들어가기</h3>
+          <div class="field"><label for="f-code">초대 코드 6자리</label>
+            <input id="f-code" name="c" type="text" maxlength="6" pattern="[A-Za-z0-9]{6}" autocomplete="off" autocapitalize="characters" spellcheck="false" required aria-describedby="f-code-err" style="text-transform:uppercase;font-family:var(--font-mono)">
+            <p class="field__error" id="f-code-err" hidden>초대 코드는 영문과 숫자 6자리예요. 받은 링크나 코드를 확인해 주세요.</p></div>
+          <div class="btn-row"><button class="btn btn--secondary" type="submit">코드로 들어가기</button></div>
+          <p class="form__status" role="status" data-form-status></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="plans" aria-labelledby="plans-h">
+    <div class="wrap grid grid--top">
+      <div class="span-5 stack-5">
+        <h2 id="plans-h">알바와 이동 시간까지 빼고 계산합니다</h2>
+        <p class="t-lead">수업만 보고 잡은 모임은 자주 꼬입니다. 알바·동아리 같은 개인 일정과 강의실 사이 이동 시간을 넣으면 그 시간은 빈 시간에서 빠집니다.</p>
+        <div class="stack-2">
+          <p>개인 일정은 매주 반복이나 그날만으로 넣습니다.</p>
+          <p>수업 전후 여유는 10분, 15분, 20분 중에 고릅니다.</p>
+          <p>격자를 끌거나 눌러서 바로 추가할 수 있어요.</p>
+        </div>
+        <a class="link" href="#start">팀 만들고 직접 넣어 보기</a>
+      </div>
+      <div class="frame frame--split span-6 start-7">
+        <div class="stage stage--fade-br">
+          <div class="at-corner to-edge" style="--ax:56px;--ay:56px">
+            <div class="tp-card ui tp-editor" role="img" aria-label="내 시간표 편집: 수업 블록 사이에 회색 줄무늬로 표시된 알바와 동아리 일정, 그 아래 일정 목록">
+              <div class="tp-card__h">내 시간표 편집<small>매주 반복</small></div>
+              <div class="tp-week" aria-hidden="true">
+                <span><i style="top:14%;height:14%;--c:#3a66b8">소프트웨어공학</i></span>
+                <span><i style="top:0;height:14%;--c:#b5523a">운영체제</i></span>
+                <span><i style="top:36%;height:18%;--c:#2f7d55">데이터베이스</i><i class="p" style="top:72%;height:18%">동아리</i></span>
+                <span><i class="p" style="top:76%;height:24%">알바</i></span>
+                <span><i style="top:36%;height:14%;--c:#8a6a1f">통계학</i></span>
+              </div>
+              <div class="tp-list" aria-hidden="true">
+                <span><i class="tp-sw" style="background:#7d8590"></i>알바<small>목 18:00 ~ 21:00 · 매주</small></span>
+                <span><i class="tp-sw" style="background:#7d8590"></i>동아리<small>수 17:00 ~ 19:00 · 매주</small></span>
+                <span><i class="tp-sw" style="background:#7d8590"></i>병원<small>11/20(금) 15:00 ~ 16:00 · 그날만</small></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="faq" aria-labelledby="faq-h">
+    <div class="wrap grid grid--top">
+      <div class="span-5 stack-4">
+        <h2 id="faq-h">자주 묻는 질문</h2>
+        <p class="muted">처음 쓰는 팀원이 많이 묻는 것들입니다.</p>
+        <a class="link" href="#start">팀 만들기 화면으로</a>
+        <div class="tp-card ui tp-device" role="img" aria-label="다른 기기에서 열기: 휴대폰 카메라로 찍는 QR 코드">
+          <div class="tp-card__h">다른 기기에서 열기<small>김범수</small></div>
+          <span aria-hidden="true"><svg viewBox="0 0 21 21" width="132" height="132" shape-rendering="crispEdges" fill="var(--ink)"><rect x="0" y="0" width="7" height="7"/><rect x="1" y="1" width="5" height="5" fill="var(--surface)"/><rect x="2" y="2" width="3" height="3"/><rect x="14" y="0" width="7" height="7"/><rect x="15" y="1" width="5" height="5" fill="var(--surface)"/><rect x="16" y="2" width="3" height="3"/><rect x="0" y="14" width="7" height="7"/><rect x="1" y="15" width="5" height="5" fill="var(--surface)"/><rect x="2" y="16" width="3" height="3"/><rect x="8" y="0" width="1" height="1"/><rect x="10" y="0" width="1" height="1"/><rect x="11" y="0" width="1" height="1"/><rect x="9" y="1" width="1" height="1"/><rect x="11" y="2" width="1" height="1"/><rect x="12" y="2" width="1" height="1"/><rect x="10" y="3" width="1" height="1"/><rect x="12" y="3" width="1" height="1"/><rect x="10" y="4" width="1" height="1"/><rect x="8" y="6" width="1" height="1"/><rect x="9" y="6" width="1" height="1"/><rect x="11" y="6" width="1" height="1"/><rect x="12" y="6" width="1" height="1"/><rect x="8" y="7" width="1" height="1"/><rect x="9" y="7" width="1" height="1"/><rect x="10" y="7" width="1" height="1"/><rect x="2" y="8" width="1" height="1"/><rect x="3" y="8" width="1" height="1"/><rect x="6" y="8" width="1" height="1"/><rect x="7" y="8" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="10" y="8" width="1" height="1"/><rect x="11" y="8" width="1" height="1"/><rect x="15" y="8" width="1" height="1"/><rect x="16" y="8" width="1" height="1"/><rect x="17" y="8" width="1" height="1"/><rect x="18" y="8" width="1" height="1"/><rect x="19" y="8" width="1" height="1"/><rect x="20" y="8" width="1" height="1"/><rect x="2" y="9" width="1" height="1"/><rect x="4" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="14" y="9" width="1" height="1"/><rect x="16" y="9" width="1" height="1"/><rect x="17" y="9" width="1" height="1"/><rect x="18" y="9" width="1" height="1"/><rect x="0" y="10" width="1" height="1"/><rect x="2" y="10" width="1" height="1"/><rect x="3" y="10" width="1" height="1"/><rect x="4" y="10" width="1" height="1"/><rect x="5" y="10" width="1" height="1"/><rect x="7" y="10" width="1" height="1"/><rect x="9" y="10" width="1" height="1"/><rect x="10" y="10" width="1" height="1"/><rect x="12" y="10" width="1" height="1"/><rect x="19" y="10" width="1" height="1"/><rect x="20" y="10" width="1" height="1"/><rect x="0" y="11" width="1" height="1"/><rect x="1" y="11" width="1" height="1"/><rect x="2" y="11" width="1" height="1"/><rect x="4" y="11" width="1" height="1"/><rect x="8" y="11" width="1" height="1"/><rect x="10" y="11" width="1" height="1"/><rect x="11" y="11" width="1" height="1"/><rect x="13" y="11" width="1" height="1"/><rect x="15" y="11" width="1" height="1"/><rect x="19" y="11" width="1" height="1"/><rect x="0" y="12" width="1" height="1"/><rect x="4" y="12" width="1" height="1"/><rect x="5" y="12" width="1" height="1"/><rect x="6" y="12" width="1" height="1"/><rect x="8" y="12" width="1" height="1"/><rect x="13" y="12" width="1" height="1"/><rect x="14" y="12" width="1" height="1"/><rect x="16" y="12" width="1" height="1"/><rect x="19" y="12" width="1" height="1"/><rect x="12" y="13" width="1" height="1"/><rect x="13" y="13" width="1" height="1"/><rect x="16" y="13" width="1" height="1"/><rect x="17" y="13" width="1" height="1"/><rect x="18" y="13" width="1" height="1"/><rect x="8" y="14" width="1" height="1"/><rect x="11" y="14" width="1" height="1"/><rect x="13" y="14" width="1" height="1"/><rect x="14" y="14" width="1" height="1"/><rect x="15" y="14" width="1" height="1"/><rect x="8" y="15" width="1" height="1"/><rect x="10" y="15" width="1" height="1"/><rect x="16" y="15" width="1" height="1"/><rect x="17" y="15" width="1" height="1"/><rect x="18" y="15" width="1" height="1"/><rect x="11" y="16" width="1" height="1"/><rect x="13" y="16" width="1" height="1"/><rect x="14" y="16" width="1" height="1"/><rect x="16" y="16" width="1" height="1"/><rect x="18" y="16" width="1" height="1"/><rect x="19" y="16" width="1" height="1"/><rect x="8" y="17" width="1" height="1"/><rect x="9" y="17" width="1" height="1"/><rect x="16" y="17" width="1" height="1"/><rect x="8" y="18" width="1" height="1"/><rect x="9" y="18" width="1" height="1"/><rect x="10" y="18" width="1" height="1"/><rect x="11" y="18" width="1" height="1"/><rect x="12" y="18" width="1" height="1"/><rect x="13" y="18" width="1" height="1"/><rect x="16" y="18" width="1" height="1"/><rect x="17" y="18" width="1" height="1"/><rect x="18" y="18" width="1" height="1"/><rect x="20" y="18" width="1" height="1"/><rect x="8" y="19" width="1" height="1"/><rect x="10" y="19" width="1" height="1"/><rect x="13" y="19" width="1" height="1"/><rect x="14" y="19" width="1" height="1"/><rect x="15" y="19" width="1" height="1"/><rect x="16" y="19" width="1" height="1"/><rect x="19" y="19" width="1" height="1"/><rect x="9" y="20" width="1" height="1"/><rect x="10" y="20" width="1" height="1"/><rect x="12" y="20" width="1" height="1"/><rect x="13" y="20" width="1" height="1"/><rect x="14" y="20" width="1" height="1"/><rect x="19" y="20" width="1" height="1"/><rect x="20" y="20" width="1" height="1"/></svg></span>
+          <p aria-hidden="true">휴대폰 카메라로 찍으면 그 기기에서도 내 시간표를 고칠 수 있어요.</p>
+        </div>
+      </div>
+      <div class="faq span-6 start-7">
+        <div class="faq__item"><h3>가입해야 하나요?</h3><p>아니요. 팀 이름만 넣으면 팀이 생기고, 팀원은 링크를 열어 이름만 적으면 됩니다.</p></div>
+        <div class="faq__item"><h3>돈이 드나요?</h3><p>아니요. 무료로 쓸 수 있습니다.</p></div>
+        <div class="faq__item"><h3>시간표 사진은 어디에 저장되나요?</h3><p>저장되지 않습니다. 사진은 브라우저 안에서만 읽고, 인식한 수업 시간만 팀에 저장합니다.</p></div>
+        <div class="faq__item"><h3>휴대폰과 PC에서 같이 쓸 수 있나요?</h3><p>네. 팀 화면의 '다른 기기에서 열기'로 QR이나 링크를 만들어 다른 기기에서 여세요.</p></div>
+        <div class="faq__item"><h3>에브리타임이 아니어도 되나요?</h3><p>네. 직접 입력하거나 격자를 끌어서 넣을 수 있습니다. 사진 인식은 에브리타임 캡처에 맞춰져 있어요.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer closing" id="contact" aria-labelledby="close-h">
+  <div class="wrap">
+    <div class="closing__cta close--word">
+      <div class="section-head--split">
+        <div><h2 id="close-h">이번 주 팀플 모임, 지금 정하세요</h2><p class="t-lead">가입 없이 무료, 초대 링크 하나면 됩니다.</p></div>
+        <a class="btn btn--primary" href="#start">팀 만들기<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+      </div>
+      <p class="close__word" aria-hidden="true">팀플 캘린더</p>
+    </div>
+    <div class="closing__links">
+      <div class="grid">
+        <div class="span-4 stack-4">
+          <a class="nav__logo" href="#top">팀플 캘린더</a>
+          <p class="footer__lede">팀원 시간표로 모일 시간을 찾습니다.</p>
+        </div>
+        <div class="span-2 footer__col"><h3>미리보기</h3><ul><li><a href="#team">빈 시간 목록</a></li><li><a href="#team">팀 달력</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>사용법</h3><ul><li><a href="#how">시간표 올리기</a></li><li><a href="#how">투표로 확정</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>일정</h3><ul><li><a href="#plans">개인 일정</a></li><li><a href="#plans">이동 여유</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>질문</h3><ul><li><a href="#faq">자주 묻는 질문</a></li><li><a href="#start">코드로 들어가기</a></li></ul></div>
+      </div>
+      <div class="footer__legal">
+        <span>&copy; 2026 팀플 캘린더</span>
+        <div class="socials"></div>
+      </div>
     </div>
   </div>
-</div>
+</footer>
 
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
@@ -48,51 +507,58 @@
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const teamUrl = (code) => `team.html?c=${encodeURIComponent(code)}`;
+const say = (form, text, error) => { const s = form.querySelector("[data-form-status]"); s.textContent = text; s.style.color = error ? "var(--error)" : ""; };
 
+// 이 스크립트의 리스너가 system.js(모듈)보다 먼저 붙는다: 형식이 틀리면 system.js가 칸 아래에 오류를 띄우게 두고 여기서는 멈춘다
 $("#create").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const msg = $("#create-msg"); msg.className = "msg"; msg.textContent = "만드는 중…";
+  const f = e.target;
+  if (!f.checkValidity()) return;
+  say(f, "만드는 중…");
   try {
-    const t = await TP_API.createTeam(e.target.name.value.trim());
+    const t = await TP_API.createTeam(f.elements.name.value.trim());
     TP_STORE.rememberTeam(t.code, t.name);
     location.href = teamUrl(t.code);
-  } catch (err) { msg.className = "msg error"; msg.textContent = err.message; }
+  } catch (err) { say(f, err.message, true); }
 });
 
 $("#join").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const code = e.target.code.value.trim().toUpperCase();
-  const msg = $("#join-msg"); msg.className = "msg"; msg.textContent = "";
+  const f = e.target;
+  if (!f.checkValidity()) return;
+  const code = f.elements.c.value.trim().toUpperCase();
+  say(f, "팀을 찾는 중…");
   try {
     const t = await TP_API.getTeam(code);
     if (!t) throw new Error("팀을 찾을 수 없습니다. 초대 코드를 확인해 주세요.");
     TP_STORE.rememberTeam(t.code, t.name);
     location.href = teamUrl(code);
-  } catch (err) { msg.className = "msg error"; msg.textContent = err.message; }
+  } catch (err) { say(f, err.message, true); }
 });
 
-// 내 팀 목록 (이 브라우저에 저장)
+// 이 브라우저의 내 팀 목록 (최근 3개만 보여 줘 섹션 높이를 지킨다)
+const SHOW = 3;
 function renderTeams() {
   const teams = TP_STORE.teams();
-  $("#recent").hidden = !teams.length;
-  $("#recent-list").innerHTML = teams.map(t => `<li>
-    <a href="${teamUrl(t.code)}">
-      <b>${esc(t.name || "이름 없는 팀")}</b>
-      <span class="code-sm">${esc(t.code)}</span>
-      ${t.me ? `<span class="chip me">${esc(t.me)}(으)로 참여 중</span>` : `<span class="chip empty">보기만 함</span>`}
-    </a>
-    ${t.me ? "" : `<button class="ghost" data-forget="${esc(t.code)}" title="목록에서 지우기">×</button>`}
+  $("#recent-empty").hidden = teams.length > 0;
+  $("#recent-list").hidden = !teams.length;
+  $("#recent-list").innerHTML = teams.slice(0, SHOW).map(t => `<li>
+    <a href="${teamUrl(t.code)}">${esc(t.name || "이름 없는 팀")}</a>
+    <span class="rows__value">${esc(t.code)} · ${t.me ? `${esc(t.me)}(으)로 참여` : "보기만 함"}</span>
+    ${t.me ? "" : `<button class="forget" type="button" data-forget="${esc(t.code)}" aria-label="${esc(t.name || t.code)} 목록에서 지우기">×</button>`}
   </li>`).join("");
+  $("#recent-more").hidden = teams.length <= SHOW;
+  $("#recent-more").textContent = `그 밖에 ${teams.length - SHOW}개 팀이 더 있어요. 팀 화면 주소로 바로 들어갈 수 있습니다.`;
   document.querySelectorAll("[data-forget]").forEach(b => b.addEventListener("click", () => {
     TP_STORE.forgetTeam(b.dataset.forget); renderTeams();
   }));
 }
 renderTeams();
 
-if (!window.TP_CONFIG?.SUPABASE_URL) {
-  $("#create-msg").className = "msg error";
-  $("#create-msg").textContent = "js/config.js 에 Supabase URL과 키를 넣어야 사용할 수 있습니다.";
-}
+if (!window.TP_CONFIG?.SUPABASE_URL) say($("#create"), "js/config.js 에 Supabase URL과 키를 넣어야 사용할 수 있습니다.", true);
 </script>
+<script type="module" src="assets/system.js"></script>
+<script type="module" src="assets/motion/motion.js"></script>
+<script type="module" src="assets/layout/layout.js"></script>
 </body>
 </html>

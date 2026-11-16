@@ -65,7 +65,7 @@ Claude는 Supabase DDL을 직접 실행할 수 없다(키가 publishable뿐).
 
 - UI 문구와 주석은 한국어. 사용자에게 보이는 오류 메시지도 한국어로, 해결 방법을 함께 적는다.
 - 사용자 입력을 HTML에 넣을 때는 항상 `esc()`를 거친다.
-- 외부 라이브러리는 정확한 버전으로 고정하고, 필요한 순간에만 불러온다(`tesseract.js@5.1.1` jsDelivr, `qrcodejs/1.0.0` cdnjs).
+- 외부 라이브러리는 정확한 버전으로 고정하고, 필요한 순간에만 불러온다(`tesseract.js@5.1.1` jsDelivr, `qrcodejs/1.0.0` cdnjs). 글꼴은 Pretendard `v1.3.9`(jsDelivr, `css/app.css` 맨 위 `@import`).
 - 새 의존성이나 빌드 도구(npm, 번들러)를 들이지 않는다. 이 PC에는 Node가 없다.
 
 ### 겪었던 함정
