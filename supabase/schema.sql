@@ -57,6 +57,10 @@ create table if not exists public.meeting_votes (
 alter table public.teams add column if not exists confirmed_option_id bigint
   references public.meeting_options(id) on delete set null;
 
+-- 읽기 전용 팀(예시 팀): 누구나 볼 수 있지만 새로 참여할 수 없다. 이미 있는 팀원은 그대로 고칠 수 있다.
+-- 켜기: update public.teams set read_only = true where code = '코드';
+alter table public.teams add column if not exists read_only boolean not null default false;
+
 alter table public.teams           enable row level security;
 alter table public.members         enable row level security;
 alter table public.slots           enable row level security;
@@ -115,7 +119,7 @@ $$;
 
 
 -- 팀 조회 (토큰은 절대 내보내지 않음) → 없으면 null
--- { code, name, confirmed_option_id,
+-- { code, name, read_only, confirmed_option_id,
 --   members: [{ id, name, slots: [{ name, day, start, end, location, kind, date }] }],
 --   options: [{ id, date, start, end, proposed_by, votes: [{ member_id, vote }] }] }   (오늘 이후 후보만)
 create or replace function public.get_team(p_code text)
@@ -125,6 +129,7 @@ as $$
   select json_build_object(
     'code', t.code,
     'name', t.name,
+    'read_only', t.read_only,
     'confirmed_option_id', t.confirmed_option_id,
     'members', coalesce((
       select json_agg(json_build_object(
@@ -173,6 +178,9 @@ begin
   select id into v_team_id from teams where code = upper(btrim(p_code));
   if v_team_id is null then
     raise exception '팀을 찾을 수 없습니다. 초대 코드를 확인해 주세요.';
+  end if;
+  if (select read_only from teams where id = v_team_id) then
+    raise exception '예시 팀은 둘러보기만 할 수 있습니다. 홈에서 새 팀을 만들어 보세요.';
   end if;
   if (select count(*) from members where team_id = v_team_id) >= 30 then
     raise exception '한 팀에는 30명까지 참여할 수 있습니다.';

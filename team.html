@@ -36,6 +36,11 @@
     <p class="msg" id="join-msg"></p>
   </div>
 
+  <!-- 예시 팀(읽기 전용): 참여 카드 대신 보여 준다 -->
+  <div class="card" id="readonly-note" hidden>
+    <p class="msg" style="margin:0"><b>예시 팀이에요.</b> 둘러보기만 할 수 있고 참여는 할 수 없어요. 직접 써 보려면 <a href="./">홈에서 새 팀을 만들어 보세요.</a></p>
+  </div>
+
   <!-- 팀 겹쳐 보기 -->
   <div class="card" data-view="team">
     <div class="card-head">
@@ -69,6 +74,7 @@
       <label title="수업이 끝나고 모임 장소까지 이동하는 시간">수업 전후 여유 <select id="buffer">
         <option value="0">없음</option><option value="10">10분</option><option value="15" selected>15분</option><option value="20">20분</option></select></label>
       <label><input type="time" id="day-start" value="09:00"> ~ <input type="time" id="day-end" value="21:00"></label>
+      <label><input type="checkbox" id="weekend" checked> 주말 포함</label>
     </div>
     <ul class="free-list" id="free"></ul>
     <p class="msg" id="free-msg"></p>
@@ -248,7 +254,8 @@ async function load() {
 
   me = store.get();
   if (me && !team.members.some(m => m.id === me.id)) { store.clear(); me = null; }
-  $("#join-card").hidden = !!me;
+  $("#join-card").hidden = !!me || !!team.read_only;        // 읽기 전용 팀은 새로 참여할 수 없다 (서버도 막음)
+  $("#readonly-note").hidden = !!me || !team.read_only;
   $("#my-card").hidden = !me;
   if (me) {
     $("#my-name").textContent = me.name;
@@ -267,9 +274,9 @@ async function load() {
 
 // ---- 주 선택 ----
 function weekDays() {
-  // 월~금은 항상, 토·일은 그날 일정이 있는 팀원이 있을 때만
+  // 월~금은 항상. 토·일은 '주말 포함'을 켰거나 그날 일정이 있는 팀원이 있을 때
   return S.weekDates(week).filter(({ day, date }, i) =>
-    i < 5 || team.members.some(m => S.slotsOn(m, day, date).length));
+    i < 5 || $("#weekend").checked || team.members.some(m => S.slotsOn(m, day, date).length));
 }
 function renderWeek() {
   const all = S.weekDates(week);
@@ -337,7 +344,7 @@ function renderFree() {
     : `<li>조건에 맞는 시간이 없습니다. 다른 주를 보거나, 회의 길이를 줄이거나, 빠져도 되는 인원을 늘려 보세요.</li>`;
   $("#free").querySelectorAll("[data-propose]").forEach(b => b.addEventListener("click", () => propose(freeList[+b.dataset.propose])));
 }
-["#min-min", "#max-absent", "#buffer", "#day-start", "#day-end"].forEach(s => $(s).addEventListener("change", () => { renderTeamGrid(); renderFree(); }));
+["#min-min", "#max-absent", "#buffer", "#day-start", "#day-end", "#weekend"].forEach(s => $(s).addEventListener("change", () => { renderTeamGrid(); renderFree(); }));
 
 // ---- 모임 투표 ----
 async function propose(block) {
