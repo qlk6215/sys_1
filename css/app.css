@@ -187,6 +187,8 @@ input[type=file]::file-selector-button { font: inherit; font-weight: 600; border
 .stack .code-input { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 700; letter-spacing: 6px; text-transform: uppercase; text-align: center; }
 button.big { width: 100%; margin-top: 8px; padding: 14px; font-size: 16px; border-radius: 14px; }
 .home #recent { margin-top: 8px; }
+.example-link { display: block; text-align: center; padding: 12px; margin: -4px 0 12px; font-weight: 600; border-radius: 12px; }
+.example-link:hover { background: var(--accent-soft); text-decoration: none; }
 
 /* hidden 속성은 display 를 준 클래스(.confirmed-card, .stack 등)보다 항상 우선 */
 [hidden] { display: none !important; }
