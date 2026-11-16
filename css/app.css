@@ -208,6 +208,17 @@ body[data-view] { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 .bottom-nav button.on { color: var(--accent); }
 .bottom-nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
+/* 시작 화면 (index.html): 아이콘 등장 → 달력 칸 채움 → 사라짐. 전부 CSS라 스크립트가 없어도 사라진다 */
+.splash { position: fixed; inset: 0; z-index: 100; display: grid; place-content: center; justify-items: center; gap: 18px; background: var(--bg);
+          animation: sp-out .45s ease 1.5s both; }
+.splash svg { border-radius: 28px; box-shadow: 0 16px 36px rgba(59,111,214,.35); animation: sp-pop .6s cubic-bezier(.2,1.4,.4,1) both; }
+.sp-cal { transform-origin: 60px 60px; animation: sp-pop .5s cubic-bezier(.2,1.4,.4,1) .25s both; }
+.sp-cell { transform-box: fill-box; transform-origin: center; animation: sp-pop .35s cubic-bezier(.2,1.6,.4,1) both; animation-delay: calc(.55s + var(--i) * 90ms); }
+@keyframes sp-pop { from { opacity: 0; transform: scale(.4); } }
+@keyframes sp-out { to { opacity: 0; visibility: hidden; } }
+.no-splash .splash { display: none; }
+@media (prefers-reduced-motion: reduce) { .splash { display: none; } }
+
 /* 월별 일정표 */
 .month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 16px; }
 .mo-head { text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); padding: 4px 0; }

@@ -12,8 +12,28 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="팀플캘린더">
 <link rel="stylesheet" href="css/app.css">
+<!-- 시작 애니메이션은 앱을 켠 첫 화면에서만: 같은 탭에서 홈으로 돌아올 때는 건너뛴다 -->
+<script>try { if (sessionStorage.getItem("tp.splash")) document.documentElement.classList.add("no-splash"); sessionStorage.setItem("tp.splash", "1"); } catch {}</script>
 </head>
 <body>
+<!-- 시작 화면: 아이콘이 나타나고 달력 칸이 채워진 뒤 CSS만으로 사라진다 (css/app.css .splash) -->
+<div class="splash" aria-hidden="true">
+  <svg viewBox="0 0 120 120" width="120" height="120">
+    <rect class="sp-tile" width="120" height="120" rx="28" fill="#3b6fd6"/>
+    <g class="sp-cal">
+      <rect x="26" y="32" width="68" height="62" rx="9" fill="#fff"/>
+      <rect x="26" y="32" width="68" height="14" rx="7" fill="#dfe8fb"/>
+      <rect x="42" y="26" width="5" height="13" rx="2.5" fill="#dfe8fb"/>
+      <rect x="73" y="26" width="5" height="13" rx="2.5" fill="#dfe8fb"/>
+    </g>
+    <rect class="sp-cell" style="--i:0" x="35" y="54" width="14" height="12" rx="3" fill="#f2a765"/>
+    <rect class="sp-cell" style="--i:1" x="53" y="54" width="14" height="12" rx="3" fill="#4cb07a"/>
+    <rect class="sp-cell" style="--i:2" x="71" y="54" width="14" height="12" rx="3" fill="#e3e8f2"/>
+    <rect class="sp-cell" style="--i:3" x="35" y="72" width="14" height="12" rx="3" fill="#e3e8f2"/>
+    <rect class="sp-cell" style="--i:4" x="53" y="72" width="14" height="12" rx="3" fill="#4cb07a"/>
+    <rect class="sp-cell" style="--i:5" x="71" y="72" width="14" height="12" rx="3" fill="#f2a765"/>
+  </svg>
+</div>
 <main class="home">
   <header class="brand">
     <img src="icons/icon-192.png" alt="" width="84" height="84">
