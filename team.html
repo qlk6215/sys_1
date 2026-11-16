@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="팀플캘린더">
 <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
+<body data-view="team">
 <div class="wrap">
   <p class="sub" style="margin-bottom:8px"><a href="./">← 홈 (내 팀 목록)</a></p>
   <h1 id="team-name">불러오는 중…</h1>
@@ -22,7 +22,7 @@
   </div>
 
   <!-- 확정된 모임 -->
-  <div class="card confirmed-card" id="confirmed" hidden></div>
+  <div class="card confirmed-card" id="confirmed" data-view="team meet" hidden></div>
 
   <!-- 참여 -->
   <div class="card join-card" id="join-card" hidden>
@@ -37,7 +37,7 @@
   </div>
 
   <!-- 팀 겹쳐 보기 -->
-  <div class="card">
+  <div class="card" data-view="team">
     <div class="card-head">
       <h2>팀 전체 <span class="chips" id="members" style="display:inline-flex;margin-left:8px"></span></h2>
       <div class="week-nav">
@@ -58,7 +58,7 @@
   </div>
 
   <!-- 공통 빈 시간 -->
-  <div class="card">
+  <div class="card" data-view="meet">
     <h2>모일 수 있는 시간 <small class="h-sub" id="free-week"></small></h2>
     <div class="filters">
       <label>회의 길이 <select id="min-min">
@@ -75,14 +75,14 @@
   </div>
 
   <!-- 모임 투표 -->
-  <div class="card" id="poll-card">
+  <div class="card" id="poll-card" data-view="meet">
     <h2>모임 투표</h2>
     <ul class="poll-list" id="polls"></ul>
     <p class="msg" id="poll-msg"></p>
   </div>
 
   <!-- 내 시간표 -->
-  <div class="card" id="my-card" hidden>
+  <div class="card" id="my-card" data-view="upload edit dates" hidden>
     <div class="my-head">
       <h2>내 시간표 <small id="my-name" style="color:var(--muted);font-weight:400"></small></h2>
       <button id="device-link" title="휴대폰 등 다른 기기에서 내 시간표를 고칠 수 있는 링크">다른 기기에서 열기</button>
@@ -93,11 +93,7 @@
       <div id="device-qr"></div>
       <div class="row"><input id="device-url" readonly><button id="device-copy">복사</button><button class="ghost" id="device-close">닫기</button></div>
     </div>
-    <div class="tabs">
-      <button class="on" data-tab="upload">이미지로 불러오기</button>
-      <button data-tab="manual">직접 입력</button>
-    </div>
-    <div id="tab-upload">
+    <div data-view="upload">
       <div class="drop">
         <p>에브리타임 시간표 화면을 캡처해서 올려 주세요. (JPG/PNG)<br>
           <small>사진은 이 브라우저 안에서만 분석되고 서버로 전송되지 않습니다. 알바 등 개인 일정은 그대로 유지돼요.</small></p>
@@ -109,8 +105,8 @@
         </div>
       </div>
     </div>
-    <div id="tab-manual" hidden>
-      <p class="msg" style="margin:0 0 8px">수업, 알바·동아리 같은 개인 일정을 넣을 수 있어요. <b>날짜를 비우면 매주 반복</b>, 날짜를 넣으면 그날만 적용됩니다.</p>
+    <div data-view="edit">
+      <p class="msg" style="margin:0 0 8px">매주 반복되는 수업, 알바·동아리 같은 개인 일정을 넣어요. 그날만 있는 일정은 <b>날짜별</b> 탭에서 넣습니다.</p>
       <form class="row" id="add-slot">
         <select name="kind"><option value="class">수업</option><option value="personal">개인 일정</option></select>
         <input name="name" placeholder="이름 (과목·알바 등)" required maxlength="50" style="width:160px">
@@ -118,7 +114,6 @@
           <option value="MON">월</option><option value="TUE">화</option><option value="WED">수</option>
           <option value="THU">목</option><option value="FRI">금</option><option value="SAT">토</option><option value="SUN">일</option>
         </select>
-        <input type="date" name="date" title="비우면 매주 반복">
         <input type="time" name="start" value="09:00" required>
         <span>~</span>
         <input type="time" name="end" value="10:00" required>
@@ -126,8 +121,23 @@
         <button>추가</button>
       </form>
     </div>
+    <div data-view="dates">
+      <p class="msg" style="margin:0 0 8px">시험·병원·여행처럼 <b>그날만</b> 안 되는 일정을 넣어요. 그 날짜에만 빈 시간 계산에서 빠집니다.</p>
+      <form class="row" id="add-dated">
+        <select name="kind"><option value="personal">개인 일정</option><option value="class">수업</option></select>
+        <input name="name" placeholder="이름 (시험·병원 등)" required maxlength="50" style="width:160px">
+        <input type="date" name="date" required>
+        <input type="time" name="start" value="09:00" required>
+        <span>~</span>
+        <input type="time" name="end" value="10:00" required>
+        <input name="location" placeholder="장소(선택)" maxlength="50" style="width:120px">
+        <button>추가</button>
+      </form>
+      <p class="msg" id="dates-empty">아직 날짜별 일정이 없어요.</p>
+    </div>
     <p class="msg" id="my-msg"></p>
 
+    <div data-view="edit">
     <div class="row new-kind">
       <span>격자에 추가할 종류</span>
       <label><input type="radio" name="new-kind" value="class" checked> 수업</label>
@@ -137,11 +147,12 @@
     <p class="legend">
       <span class="only-mouse">격자 드래그: 추가 · 블록 클릭: 아래 표에서 수정 · ×: 삭제</span>
       <span class="only-touch">빈 칸 탭: 1시간 추가 · 블록 탭: 아래 표에서 수정 · ×: 삭제</span>
-      <span>· 격자에는 매주 반복 일정만 보이고, 날짜 지정 일정은 아래 목록에 있어요</span>
+      <span>· 격자에는 매주 반복 일정만 보여요</span>
     </p>
+    </div>
 
-    <h3 class="table-title" id="slot-title" hidden>일정 목록 <small>— 이름·종류·요일·날짜·시간·장소를 바로 고칠 수 있어요. 다 고치면 저장을 눌러 주세요.</small></h3>
-    <table class="slots" id="slot-table" hidden>
+    <h3 class="table-title" id="slot-title" data-view="edit dates" hidden>일정 목록 <small>— 이름·종류·요일·날짜·시간·장소를 바로 고칠 수 있어요. 다 고치면 저장을 눌러 주세요.</small></h3>
+    <table class="slots" id="slot-table" data-view="edit dates" hidden>
       <thead><tr><th>이름</th><th>요일 / 날짜</th><th>시간</th><th>장소</th><th></th></tr></thead>
       <tbody></tbody>
     </table>
@@ -153,6 +164,15 @@
     </div>
   </div>
 </div>
+
+<!-- 화면 아래 탭 -->
+<nav class="bottom-nav" aria-label="화면 전환">
+  <button type="button" data-go="team" class="on" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>팀</button>
+  <button type="button" data-go="meet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>모임</button>
+  <button type="button" data-go="upload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M5 19h14"/></svg>업로드</button>
+  <button type="button" data-go="edit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></svg>편집</button>
+  <button type="button" data-go="dates"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><circle cx="12" cy="15.5" r="1.6"/></svg>날짜별</button>
+</nav>
 
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
@@ -488,12 +508,18 @@ $("#device-copy").addEventListener("click", async () => {
 });
 $("#device-close").addEventListener("click", () => { $("#device-box").hidden = true; });
 
+// ---- 화면 아래 탭: body[data-view]에 맞는 [data-view] 요소만 보인다 (css/app.css) ----
+function setView(v) {
+  document.body.dataset.view = v;
+  document.querySelectorAll(".bottom-nav button").forEach(b => {
+    b.classList.toggle("on", b.dataset.go === v);
+    b.dataset.go === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current");
+  });
+  scrollTo(0, 0);
+}
+document.querySelectorAll(".bottom-nav button").forEach(b => b.addEventListener("click", () => setView(b.dataset.go)));
+
 // ---- 내 시간표 편집 ----
-document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
-  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
-  $("#tab-upload").hidden = b.dataset.tab !== "upload";
-  $("#tab-manual").hidden = b.dataset.tab !== "manual";
-}));
 
 function slotColors() {
   const color = {};
@@ -506,13 +532,18 @@ const newName = (kind) => `${kind === "personal" ? "개인 일정" : "수업"} $
 function renderMySlots() {
   const tb = $("#slot-table tbody");
   $("#slot-table").hidden = $("#slot-title").hidden = !mySlots.length;
+  // 편집 탭은 매주 반복 줄만, 날짜별 탭은 날짜 지정 줄만 보인다. 보일 줄이 없으면 표 머리도 숨긴다
+  const hasDated = mySlots.some(s => s.date);
+  document.body.classList.toggle("no-dated", !hasDated);
+  document.body.classList.toggle("no-weekly", !mySlots.some(s => !s.date));
+  $("#dates-empty").hidden = hasDated;
   const colorOf = slotColors();
   // 매주 반복 일정 먼저(요일·시각 순), 그다음 날짜 지정 일정(날짜 순)
   const order = (s) => s.date ? `1${s.date}${s.start}` : `0${DAYS.indexOf(s.day)}${s.start}`;
   tb.innerHTML = mySlots
     .map((s, i) => ({ s, i }))
     .sort((a, b) => order(a.s).localeCompare(order(b.s)))
-    .map(({ s, i }) => `<tr data-i="${i}" class="${s.kind === "personal" ? "personal" : ""}">
+    .map(({ s, i }) => `<tr data-i="${i}" class="${s.kind === "personal" ? "personal" : ""} ${s.date ? "dated" : ""}">
       <td><i class="swatch" style="background:${colorOf(s)}"></i>
         <select data-f="kind">${Object.entries(KIND_KO).map(([k, v]) => `<option value="${k}" ${k === s.kind ? "selected" : ""}>${v}</option>`).join("")}</select>
         <input data-f="name" value="${esc(s.name)}" maxlength="50"></td>
@@ -622,19 +653,24 @@ function renderMyGrid(colorOf) {
 }
 function markDirty() { dirty = true; renderMySlots(); }
 
-// 날짜를 고르면 요일 칸은 그 날짜의 요일로 맞춘다
-$("#add-slot").date.addEventListener("change", (e) => {
-  const f = e.target.form;
-  f.day.disabled = !!e.target.value;
-  if (e.target.value) f.day.value = S.dayOf(e.target.value);
-});
 $("#add-slot").addEventListener("submit", (e) => {
   e.preventDefault();
   const f = e.target;
   if (toMin(f.end.value) <= toMin(f.start.value)) { showError($("#my-msg"), new Error("종료 시각이 시작보다 늦어야 합니다.")); return; }
   $("#my-msg").textContent = "";
-  const date = f.date.value || null;
-  mySlots.push({ name: f.name.value.trim(), kind: f.kind.value, day: date ? S.dayOf(date) : f.day.value, date,
+  mySlots.push({ name: f.name.value.trim(), kind: f.kind.value, day: f.day.value, date: null,
+                 start: f.start.value, end: f.end.value, location: f.location.value.trim() || null });
+  f.name.value = ""; f.location.value = "";
+  markDirty();
+});
+
+// 날짜별 일정 추가: 요일은 날짜에서 구한다
+$("#add-dated").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const f = e.target, date = f.date.value;
+  if (toMin(f.end.value) <= toMin(f.start.value)) { showError($("#my-msg"), new Error("종료 시각이 시작보다 늦어야 합니다.")); return; }
+  $("#my-msg").textContent = "";
+  mySlots.push({ name: f.name.value.trim(), kind: f.kind.value, day: S.dayOf(date), date,
                  start: f.start.value, end: f.end.value, location: f.location.value.trim() || null });
   f.name.value = ""; f.location.value = "";
   markDirty();
@@ -657,6 +693,7 @@ $("#file").addEventListener("change", async (e) => {
     const kept = mySlots.filter(s => s.kind === "personal" || s.date);
     mySlots = kept.concat(r.classes.map(c => ({ ...c, kind: "class", date: null })));
     markDirty();
+    setView("edit"); // 인식 결과를 바로 확인·수정
     msg.innerHTML = `수업 ${r.classes.length}개를 찾았습니다.${kept.length ? ` (개인 일정 ${kept.length}개는 그대로 뒀어요)` : ""} 아래 목록에서 과목명·시간·강의실을 확인하고, 틀린 곳은 고친 뒤 저장해 주세요.` +
       r.warnings.map(w => `<br>⚠ ${esc(w)}`).join("");
   } catch (err) { showError(msg, err); }

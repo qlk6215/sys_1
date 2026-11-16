@@ -182,12 +182,31 @@ input[type=file]::file-selector-button { font: inherit; font-weight: 600; border
 .home .tabs { display: flex; margin-bottom: 20px; }
 .home .tabs button { flex: 1; padding: 10px 8px; }
 .stack { display: grid; gap: 8px; }
-.stack[hidden] { display: none; } /* display: grid 가 hidden 속성을 덮어쓰지 않게 */
 .stack label { font-size: 14px; font-weight: 600; }
 .stack input { width: 100%; padding: 13px 14px; font-size: 16px; border-radius: 12px; }
 .stack .code-input { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 700; letter-spacing: 6px; text-transform: uppercase; text-align: center; }
 button.big { width: 100%; margin-top: 8px; padding: 14px; font-size: 16px; border-radius: 14px; }
 .home #recent { margin-top: 8px; }
+
+/* hidden 속성은 display 를 준 클래스(.confirmed-card, .stack 등)보다 항상 우선 */
+[hidden] { display: none !important; }
+
+/* 화면 아래 탭 (team.html): body[data-view] 와 맞는 [data-view] 요소만 보인다 */
+body[data-view="team"] [data-view]:not([data-view~="team"]),
+body[data-view="meet"] [data-view]:not([data-view~="meet"]),
+body[data-view="upload"] [data-view]:not([data-view~="upload"]),
+body[data-view="edit"] [data-view]:not([data-view~="edit"]),
+body[data-view="dates"] [data-view]:not([data-view~="dates"]) { display: none !important; }
+body[data-view="edit"] table.slots tr.dated, body[data-view="dates"] table.slots tbody tr:not(.dated) { display: none !important; }
+body.no-weekly[data-view="edit"] :is(#slot-table, #slot-title), body.no-dated[data-view="dates"] :is(#slot-table, #slot-title) { display: none !important; }
+body[data-view] { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+.bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: center; background: var(--surface); border-top: 1px solid var(--line);
+               padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -4px 16px rgba(16,24,40,.05); }
+.bottom-nav button { flex: 1; max-width: 140px; height: 60px; padding: 6px 2px; display: grid; justify-items: center; align-content: center; gap: 3px;
+                      background: none; border-radius: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
+.bottom-nav button:hover:not(:disabled) { color: var(--text); }
+.bottom-nav button.on { color: var(--accent); }
+.bottom-nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---- 휴대폰 ---- */
 @media (max-width: 640px) {
@@ -196,6 +215,7 @@ button.big { width: 100%; margin-top: 8px; padding: 14px; font-size: 16px; borde
   h1 { font-size: 22px; }
   .code { font-size: 22px; letter-spacing: 3px; }
   input, select, button { font-size: 16px; } /* 16px 미만이면 iOS가 입력 시 화면을 확대함 */
+  .bottom-nav button { font-size: 12px; }
   input[type=time] { width: auto; min-width: 0; }
   .row > input:not([type=time]) { flex: 1 1 140px; min-width: 0; }
   .tabs { display: flex; }
@@ -234,7 +254,7 @@ button.big { width: 100%; margin-top: 8px; padding: 14px; font-size: 16px; borde
   table.slots input[type=time] { flex: 1; width: 0; }
   table.slots button { padding: 6px 12px; }
 
-  .savebar { position: sticky; bottom: 0; z-index: 5; background: var(--surface); margin: 12px -14px -14px; padding: 10px 14px;
+  .savebar { position: sticky; bottom: calc(60px + env(safe-area-inset-bottom)); z-index: 5; background: var(--surface); margin: 12px -14px -14px; padding: 10px 14px;
              border-top: 1px solid var(--line); border-radius: 0 0 14px 14px; box-shadow: 0 -4px 12px rgba(0,0,0,.05); }
   .savebar { flex-wrap: wrap; }
   .savebar #save { flex: 1 1 0; min-width: 0; }
