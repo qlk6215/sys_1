@@ -40,5 +40,7 @@
       rpc("confirm_option", { p_member_id: memberId, p_token: token, p_option_id: optionId }),
     deleteOption: (memberId, token, optionId) =>
       rpc("delete_option", { p_member_id: memberId, p_token: token, p_option_id: optionId }),
+    logVisit: (code) => rpc("log_visit", { p_code: code }),
+    adminStats: (password) => rpc("admin_stats", { p_password: password }),
   };
 })();

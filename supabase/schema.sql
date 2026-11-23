@@ -330,12 +330,105 @@ end;
 $$;
 
 
+-- ===== 관리용 통계 (admin.html) =====
+-- 방문 기록: 팀 페이지를 열 때마다 (날짜, 팀)별로 횟수만 센다. 이름·IP 같은 개인정보는 남기지 않는다.
+create table if not exists public.visits (
+  day     date    not null,
+  team_id bigint  not null references public.teams(id) on delete cascade,
+  count   integer not null default 0,
+  primary key (day, team_id)
+);
+
+-- 관리자 비밀번호(sha256 값만 저장, 한 줄). 정하는 방법은 파일 맨 아래 주석.
+create table if not exists public.admin_settings (
+  id        boolean primary key default true check (id),
+  pass_hash text not null
+);
+
+alter table public.visits         enable row level security;
+alter table public.admin_settings enable row level security;
+revoke all on public.visits, public.admin_settings from anon, authenticated;
+
+-- 팀 페이지를 열 때 호출. 없는 코드는 아무 일도 하지 않는다.
+create or replace function public.log_visit(p_code text)
+returns void
+language sql security definer set search_path = public
+as $$
+  insert into visits (day, team_id, count)
+  select _today_kst(), t.id, 1 from teams t where t.code = upper(btrim(p_code))
+  on conflict (day, team_id) do update set count = visits.count + 1;
+$$;
+
+-- 관리 통계. 비밀번호가 틀리면 1초 쉬고 거부한다(마구 대입하는 것을 늦춤).
+-- { today, totals: {...}, daily: [{ day, teams, members, visits }] (최근 30일), recent_teams: [...] (최근 30개) }
+create or replace function public.admin_stats(p_password text)
+returns json
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_ok   boolean;
+  v_from date := _today_kst() - 29;
+begin
+  select pass_hash = encode(sha256(convert_to(coalesce(p_password, ''), 'UTF8')), 'hex')
+    into v_ok from admin_settings where id;
+  if v_ok is not true then
+    perform pg_sleep(1);
+    raise exception '관리자 비밀번호가 맞지 않습니다.';
+  end if;
+  return json_build_object(
+    'today', _today_kst(),
+    'totals', json_build_object(
+      'teams',              (select count(*) from teams),
+      'members',            (select count(*) from members),
+      'members_with_slots', (select count(distinct member_id) from slots),
+      'slots',              (select count(*) from slots),
+      'options',            (select count(*) from meeting_options),
+      'votes',              (select count(*) from meeting_votes),
+      'confirmed_teams',    (select count(*) from teams where confirmed_option_id is not null),
+      'visits',             (select coalesce(sum(count), 0) from visits),
+      'active_teams_7d',    (select count(distinct team_id) from visits where day > _today_kst() - 7)
+    ),
+    'daily', (
+      select json_agg(json_build_object(
+        'day', d::date,
+        'teams',   (select count(*) from teams t   where (t.created_at at time zone 'Asia/Seoul')::date = d::date),
+        'members', (select count(*) from members m where (m.created_at at time zone 'Asia/Seoul')::date = d::date),
+        'visits',  (select coalesce(sum(count), 0) from visits v where v.day = d::date)
+      ) order by d)
+      from generate_series(v_from::timestamp, _today_kst()::timestamp, interval '1 day') d
+    ),
+    'recent_teams', coalesce((
+      select json_agg(x) from (
+        select t.name, t.code, t.read_only,
+               (t.created_at at time zone 'Asia/Seoul')::date as created,
+               (select count(*) from members m where m.team_id = t.id) as members,
+               (select max(day) from visits v where v.team_id = t.id) as last_visit,
+               (select coalesce(sum(count), 0) from visits v where v.team_id = t.id) as visits
+        from teams t order by t.created_at desc limit 30
+      ) x
+    ), '[]'::json)
+  );
+end;
+$$;
+
+
 revoke execute on function public._member_team(bigint, text), public._today_kst() from public, anon, authenticated;
 revoke execute on function public.create_team(text), public.get_team(text), public.join_team(text, text),
   public.save_slots(bigint, text, jsonb), public.leave_team(bigint, text),
   public.propose_option(bigint, text, text, text, text), public.vote_option(bigint, text, bigint, text),
-  public.confirm_option(bigint, text, bigint), public.delete_option(bigint, text, bigint) from public;
+  public.confirm_option(bigint, text, bigint), public.delete_option(bigint, text, bigint),
+  public.log_visit(text), public.admin_stats(text) from public;
 grant execute on function public.create_team(text), public.get_team(text), public.join_team(text, text),
   public.save_slots(bigint, text, jsonb), public.leave_team(bigint, text),
   public.propose_option(bigint, text, text, text, text), public.vote_option(bigint, text, bigint, text),
-  public.confirm_option(bigint, text, bigint), public.delete_option(bigint, text, bigint) to anon, authenticated;
+  public.confirm_option(bigint, text, bigint), public.delete_option(bigint, text, bigint),
+  public.log_visit(text), public.admin_stats(text) to anon, authenticated;
+
+
+-- ===== 한 번만 직접 실행하는 설정 (주석을 풀고 값을 넣어서 실행) =====
+-- 관리자 비밀번호 정하기 / 바꾸기:
+--   insert into public.admin_settings (id, pass_hash)
+--   values (true, encode(sha256(convert_to('여기에_비밀번호', 'UTF8')), 'hex'))
+--   on conflict (id) do update set pass_hash = excluded.pass_hash;
+-- 예시 팀을 읽기 전용으로:
+--   update public.teams set read_only = true where code = '5EL3MS';

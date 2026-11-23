@@ -280,12 +280,15 @@ function startDemo() {
   });
 }
 
+let visitLogged = false;
 async function load() {
   if (!CODE) return fatal("초대 코드가 없습니다.");
   try { team = await TP_API.getTeam(CODE); }
   catch (e) { return fatal(e.message); }
   if (!team) return fatal("팀을 찾을 수 없습니다. 초대 코드를 확인해 주세요.");
   takeDeviceLink();
+  // 방문 기록: 페이지를 연 첫 번째 불러오기에서만, 실패해도 무시 (관리 통계용, 개인정보 없음)
+  if (!visitLogged) { visitLogged = true; TP_API.logVisit(CODE).catch(() => {}); }
   TP_STORE.rememberTeam(team.code, team.name); // 홈 화면 '내 팀' 목록에 추가
   team.options ??= [];
 

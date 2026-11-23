@@ -221,6 +221,18 @@ body[data-view] { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 .no-splash .splash { display: none; }
 @media (prefers-reduced-motion: reduce) { .splash { display: none; } }
 
+/* 관리 화면 (admin.html) */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.stat { background: var(--field); border-radius: 12px; padding: 14px 16px; display: grid; gap: 2px; }
+.stat b { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+.stat span { font-size: 13px; color: var(--muted); }
+.table-scroll { overflow-x: auto; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stats-table th { font-size: 12px; font-weight: 600; color: var(--muted); }
+.stats-table th, .stats-table td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+.stats-table .nowrap { white-space: nowrap; }
+i.bar { display: block; height: 10px; min-width: 2px; border-radius: 5px; background: var(--accent); }
+
 /* 월별 일정표 */
 .month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 16px; }
 .mo-head { text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); padding: 4px 0; }
