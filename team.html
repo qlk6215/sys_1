@@ -38,7 +38,12 @@
 
   <!-- 예시 팀(읽기 전용): 참여 카드 대신 보여 준다 -->
   <div class="card" id="readonly-note" hidden>
-    <p class="msg" style="margin:0"><b>예시 팀이에요.</b> 둘러보기만 할 수 있고 참여는 할 수 없어요. 직접 써 보려면 <a href="./">홈에서 새 팀을 만들어 보세요.</a></p>
+    <p class="msg" style="margin:0"><b>예시 팀 체험 중이에요.</b> <span id="readonly-text"></span> 직접 써 보려면 <a href="./">홈에서 새 팀을 만들어 보세요.</a></p>
+  </div>
+
+  <!-- 참여 전에는 업로드·편집·월별 탭이 비어 보이므로 안내를 둔다 -->
+  <div class="card" id="need-join" data-view="upload edit dates" hidden>
+    <p class="msg" id="need-join-text" style="margin:0"></p>
   </div>
 
   <!-- 팀 겹쳐 보기 -->
@@ -137,6 +142,8 @@
         </div>
       </div>
       <div class="month" id="month"></div>
+      <p class="legend" style="margin:-8px 0 12px"><span><i style="background:var(--accent)"></i>확정된 모임</span><span><i style="border:1px dashed var(--accent)"></i>투표 중인 후보</span><span><i style="background:#e9ebf0"></i>그날만 일정</span><span>● 매주 일정</span></p>
+      <div class="mo-detail" id="mo-detail" hidden></div>
       <form class="row" id="add-dated">
         <select name="kind"><option value="personal">개인 일정</option><option value="class">수업</option></select>
         <input name="name" placeholder="이름 (시험·병원 등)" required maxlength="50" style="width:160px">
@@ -239,6 +246,40 @@ function takeDeviceLink() {
   if (member) store.set({ id: member.id, token: m[2], name: member.name, teamName: team.name });
 }
 
+// ---- 예시 팀 체험 모드 ----
+// 예시 팀에서는 서버에 쓰는 함수들을 화면 안의 사본(team)만 바꾸는 것으로 갈아 끼운다.
+// 그래서 나머지 코드는 평소와 똑같이 돌고, 새로고침하면 서버의 원래 내용으로 돌아간다.
+const DEMO_CODES = ["5EL3MS"];
+const isDemoTeam = (t) => DEMO_CODES.includes(t.code) || !!t.read_only;
+let demoOn = false;
+function startDemo() {
+  if (demoOn) return;
+  demoOn = true;
+  const local = team, mine = local.members[0];
+  let nextId = -1; // 화면에서 만든 후보는 음수 id
+  const setVote = (o, vote) => { o.votes = o.votes.filter(v => v.member_id !== mine.id); if (vote) o.votes.push({ member_id: mine.id, vote }); };
+  Object.assign(TP_API, {
+    getTeam: async () => local,
+    saveSlots: async (_id, _token, slots) => { mine.slots = slots; },
+    proposeOption: async (_id, _token, date, start, end) => {
+      let o = local.options.find(x => x.date === date && x.start === start && x.end === end);
+      if (!o) {
+        o = { id: nextId--, date, start, end, proposed_by: mine.id, votes: [] };
+        local.options.push(o);
+        local.options.sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+      }
+      setVote(o, "yes");
+      return { id: o.id };
+    },
+    voteOption: async (_id, _token, optionId, vote) => { setVote(local.options.find(o => o.id === optionId), vote); },
+    confirmOption: async (_id, _token, optionId) => { local.confirmed_option_id = optionId; },
+    deleteOption: async (_id, _token, optionId) => {
+      local.options = local.options.filter(o => o.id !== optionId);
+      if (local.confirmed_option_id === optionId) local.confirmed_option_id = null;
+    },
+  });
+}
+
 async function load() {
   if (!CODE) return fatal("초대 코드가 없습니다.");
   try { team = await TP_API.getTeam(CODE); }
@@ -254,8 +295,17 @@ async function load() {
 
   me = store.get();
   if (me && !team.members.some(m => m.id === me.id)) { store.clear(); me = null; }
-  $("#join-card").hidden = !!me || !!team.read_only;        // 읽기 전용 팀은 새로 참여할 수 없다 (서버도 막음)
-  $("#readonly-note").hidden = !!me || !team.read_only;
+  // 예시 팀: 참여하지 않은 방문자는 첫 팀원의 화면으로 체험한다 (서버에는 저장하지 않음)
+  if (!me && isDemoTeam(team) && team.members.length) {
+    startDemo();
+    me = { id: team.members[0].id, name: team.members[0].name, token: "", demo: true };
+  }
+  $("#join-card").hidden = !!me || isDemoTeam(team);
+  $("#readonly-note").hidden = !me?.demo;
+  if (me?.demo) $("#readonly-text").textContent = `${me.name} 님 화면으로 둘러보는 중이에요. 고친 내용은 이 화면에서만 바뀌고 저장되지 않아요. 새로고침하면 처음으로 돌아갑니다.`;
+  $("#device-link").hidden = $("#leave").hidden = !!me?.demo; // 체험 중에는 기기 옮기기·팀 나가기가 없다
+  $("#need-join").hidden = !!me;
+  $("#need-join-text").textContent = "시간표 올리기·편집·월별 일정표는 팀에 참여한 뒤에 쓸 수 있어요. 위에서 이름을 넣고 참여해 주세요.";
   $("#my-card").hidden = !me;
   if (me) {
     $("#my-name").textContent = me.name;
@@ -593,23 +643,44 @@ let selDay = null;  // 누른 날짜 (추가 양식의 날짜로 들어간다)
 function renderMonth() {
   const now = new Date(), first = new Date(now.getFullYear(), now.getMonth() + month, 1);
   const y = first.getFullYear(), m = first.getMonth(), days = new Date(y, m + 1, 0).getDate();
-  const today = S.today(), meet = team?.options?.find(o => o.id === team.confirmed_option_id);
+  const today = S.today(), opts = team?.options ?? [];
   $("#mo-label").textContent = `${y}년 ${m + 1}월`;
   let html = DAYS.map(d => `<div class="mo-head">${DAY_KO[d]}</div>`).join("") + "<div></div>".repeat((first.getDay() + 6) % 7);
   for (let d = 1; d <= days; d++) {
-    const date = S.ymd(new Date(y, m, d));
+    const date = S.ymd(new Date(y, m, d)), day = S.dayOf(date);
     const items = mySlots.filter(s => s.date === date).sort((a, b) => a.start.localeCompare(b.start));
+    const weekly = mySlots.filter(s => !s.date && s.day === day).length; // 매주 일정은 점으로만 (칸이 좁아서)
     html += `<button type="button" class="mo-day ${date === today ? "today" : ""} ${date === selDay ? "sel" : ""}" data-date="${date}"><b>${d}</b>`
-      + (meet?.date === date ? `<i class="meet">모임 ${meet.start}</i>` : "")
-      + items.map(s => `<i>${esc(s.name)}</i>`).join("") + "</button>";
+      + opts.filter(o => o.date === date).map(o => o.id === team.confirmed_option_id ? `<i class="meet">모임 ${o.start}</i>` : `<i class="cand">후보 ${o.start}</i>`).join("")
+      + items.map(s => `<i>${esc(s.name)}</i>`).join("")
+      + (weekly ? `<span class="mo-dots">${"<u></u>".repeat(Math.min(weekly, 4))}</span>` : "") + "</button>";
   }
   $("#month").innerHTML = html;
   $("#month").querySelectorAll(".mo-day").forEach(b => b.addEventListener("click", () => {
     selDay = b.dataset.date;
     $("#add-dated").date.value = selDay;
     renderMonth();
-    $("#add-dated").name.focus();
   }));
+  renderDayDetail();
+}
+
+// 누른 날짜의 일정을 달력 아래에 풀어서 보여 준다 (달력 칸에서는 이름이 잘리므로)
+function renderDayDetail() {
+  const box = $("#mo-detail");
+  box.hidden = !selDay;
+  if (!selDay) return;
+  const day = S.dayOf(selDay), rows = [];
+  for (const o of team?.options ?? []) if (o.date === selDay)
+    rows.push([o.start, `<b>${o.id === team.confirmed_option_id ? "확정된 모임" : "투표 중인 후보"}</b> ${o.start}~${o.end}`]);
+  for (const s of mySlots) if (s.date ? s.date === selDay : s.day === day)
+    rows.push([s.start, `${esc(s.name)} ${s.start}~${s.end} <small>${s.date ? "그날만" : "매주"}</small>`]);
+  // 다른 팀원은 그날만 있는 일정만 (매주 일정은 팀 탭 격자에서 본다)
+  for (const mem of team?.members ?? []) if (mem.id !== me?.id) for (const s of mem.slots) if (s.date === selDay)
+    rows.push([s.start, `${esc(mem.name)}: ${esc(s.name)} ${s.start}~${s.end} <small>팀원 일정</small>`]);
+  rows.sort((a, b) => a[0].localeCompare(b[0]));
+  box.innerHTML = `<b>${fmtDate(selDay)}</b>` + (rows.length
+    ? `<ul>${rows.map(r => `<li>${r[1]}</li>`).join("")}</ul>`
+    : `<p>이 날은 일정이 없어요. 아래에서 그날 일정을 넣을 수 있어요.</p>`);
 }
 $("#mo-prev").addEventListener("click", () => { month--; renderMonth(); });
 $("#mo-next").addEventListener("click", () => { month++; renderMonth(); });
@@ -749,7 +820,7 @@ $("#save").addEventListener("click", async () => {
   try {
     await TP_API.saveSlots(me.id, me.token, mySlots.map(({ name, day, start, end, location, kind, date }) =>
       ({ name, day, start, end, location: location || null, kind: kind || "class", date: date || null })));
-    dirty = false; msg.textContent = "저장했습니다."; load();
+    dirty = false; msg.textContent = me.demo ? "예시 팀이라 이 화면에서만 바뀌었어요." : "저장했습니다."; load();
     setTimeout(() => msg.textContent = "", 2000);
   } catch (err) { showError(msg, err); }
 });

@@ -229,6 +229,13 @@ body[data-view] { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 .mo-day b { font-size: 13px; font-weight: 600; padding-left: 2px; }
 .mo-day i { font-style: normal; font-size: 11px; line-height: 1.3; padding: 1px 4px; border-radius: 4px; background: #e9ebf0; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mo-day i.meet { background: var(--accent); color: #fff; }
+.mo-day i.cand { background: transparent; border: 1px dashed var(--accent); color: var(--accent); }
+.mo-dots { display: flex; gap: 3px; padding: 1px 2px; margin-top: auto; }
+.mo-dots u { width: 5px; height: 5px; border-radius: 50%; background: #9aa3b2; }
+.mo-detail { background: var(--field); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; font-size: 14px; }
+.mo-detail ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.mo-detail p { margin: 6px 0 0; color: var(--muted); }
+.mo-detail small { color: var(--muted); margin-left: 4px; }
 .mo-day.today b { color: var(--accent); }
 .mo-day.sel { border-color: var(--accent); box-shadow: var(--ring); }
 
