@@ -253,6 +253,14 @@ dialog.help dl { margin: 0; display: grid; gap: 10px; }
 dialog.help dt { font-weight: 700; }
 dialog.help dd { margin: 2px 0 0; color: #4b5563; }
 
+/* 편집 탭: 목록은 접어 두고 고른 일정만 (team.html renderEditPick) */
+.edit-pick { display: grid; gap: 6px; margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: var(--field); }
+.edit-pick .row button { font-size: 14px; padding: 6px 10px; }
+body[data-view="edit"]:not(.list-open) table.slots tbody tr:not(.editing) { display: none !important; }
+body[data-view="edit"].no-edit:not(.list-open) #slot-table { display: none !important; }
+body[data-view="edit"] table.slots tr.editing { background: var(--accent-soft); }
+.editor .slot.picked { outline: 3px solid var(--text); outline-offset: 1px; z-index: 2; }
+
 /* 모든 빈 시간: 줄 안에서 시작 시각 고르기, 접기 */
 .free-list li { flex-wrap: wrap; }
 .free-list .pick { flex: 1 0 100%; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); gap: 6px; }

@@ -170,13 +170,21 @@
     </div>
     <div id="my-grid" style="margin-top:8px"></div>
     <p class="legend">
-      <span class="only-mouse">격자 드래그: 추가 · 블록 클릭: 아래 표에서 수정 · ×: 삭제</span>
-      <span class="only-touch">빈 칸 탭: 1시간 추가 · 블록 탭: 아래 표에서 수정 · ×: 삭제</span>
+      <span class="only-mouse">격자 드래그: 추가 · 블록 클릭: 아래에서 수정 · ×: 삭제</span>
+      <span class="only-touch">빈 칸 탭: 1시간 추가 · 블록 탭: 아래에서 수정 · ×: 삭제</span>
       <span>· 격자에는 매주 반복 일정만 보여요</span>
     </p>
     </div>
 
-    <h3 class="table-title" id="slot-title" data-view="edit dates" hidden>일정 목록 <small>— 이름·종류·요일·날짜·시간·장소를 바로 고칠 수 있어요. 다 고치면 저장을 눌러 주세요.</small></h3>
+    <!-- 편집 탭: 목록은 접어 두고, 격자에서 누른 일정만 아래에 보인다 -->
+    <div class="edit-pick" id="edit-pick" data-view="edit">
+      <p class="msg" id="edit-hint" style="margin:0"></p>
+      <div class="row">
+        <button type="button" class="ghost" id="edit-close" hidden>선택 닫기</button>
+        <button type="button" class="ghost" id="list-toggle"></button>
+      </div>
+    </div>
+    <h3 class="table-title" id="slot-title" data-view="dates" hidden>일정 목록 <small>— 이름·종류·요일·날짜·시간·장소를 바로 고칠 수 있어요. 다 고치면 저장을 눌러 주세요.</small></h3>
     <table class="slots" id="slot-table" data-view="edit dates" hidden>
       <thead><tr><th>이름</th><th>요일 / 날짜</th><th>시간</th><th>장소</th><th></th></tr></thead>
       <tbody></tbody>
@@ -669,8 +677,12 @@ function slotColors() {
 const newKind = () => document.querySelector('input[name="new-kind"]:checked').value;
 const newName = (kind) => `${kind === "personal" ? "개인 일정" : "수업"} ${mySlots.filter(s => s.kind === kind).length + 1}`;
 
+let editing = -1;     // 편집 탭에서 고르는 중인 일정의 mySlots 번호 (없으면 -1)
+let listOpen = false; // 편집 탭에서 전체 목록을 펼쳤는지
 function renderMySlots() {
   const tb = $("#slot-table tbody");
+  if (!mySlots[editing] || mySlots[editing].date) editing = -1; // 지워졌거나 날짜 지정 일정이면 선택 해제
+  renderEditPick();
   $("#slot-table").hidden = $("#slot-title").hidden = !mySlots.length;
   // 편집 탭은 매주 반복 줄만, 날짜별 탭은 날짜 지정 줄만 보인다. 보일 줄이 없으면 표 머리도 숨긴다
   const hasDated = mySlots.some(s => s.date);
@@ -683,7 +695,7 @@ function renderMySlots() {
   tb.innerHTML = mySlots
     .map((s, i) => ({ s, i }))
     .sort((a, b) => order(a.s).localeCompare(order(b.s)))
-    .map(({ s, i }) => `<tr data-i="${i}" class="${s.kind === "personal" ? "personal" : ""} ${s.date ? "dated" : ""}">
+    .map(({ s, i }) => `<tr data-i="${i}" class="${s.kind === "personal" ? "personal" : ""} ${s.date ? "dated" : ""} ${i === editing ? "editing" : ""}">
       <td><i class="swatch" style="background:${colorOf(s)}"></i>
         <select data-f="kind">${Object.entries(KIND_KO).map(([k, v]) => `<option value="${k}" ${k === s.kind ? "selected" : ""}>${v}</option>`).join("")}</select>
         <input data-f="name" value="${esc(s.name)}" maxlength="50"></td>
@@ -693,7 +705,7 @@ function renderMySlots() {
       <td class="nowrap"><input type="time" data-f="start" value="${s.start}" step="300"> ~ <input type="time" data-f="end" value="${s.end}" step="300"></td>
       <td><input data-f="location" value="${esc(s.location || "")}" placeholder="장소" maxlength="50"></td>
       <td><button data-del="${i}" title="삭제">삭제</button></td></tr>`).join("");
-  tb.querySelectorAll("button[data-del]").forEach(b => b.addEventListener("click", () => { mySlots.splice(+b.dataset.del, 1); markDirty(); }));
+  tb.querySelectorAll("button[data-del]").forEach(b => b.addEventListener("click", () => { mySlots.splice(+b.dataset.del, 1); editing = -1; markDirty(); }));
   tb.querySelectorAll("[data-f]").forEach(el => el.addEventListener("change", () => {
     const s = mySlots[+el.closest("tr").dataset.i], f = el.dataset.f, v = el.value.trim();
     const msg = $("#my-msg");
@@ -774,8 +786,8 @@ function renderMyGrid(colorOf) {
     html += `<div class="col" data-day="${d}" style="height:${hours * HOUR_PX}px">`;
     mySlots.forEach((s, i) => {
       if (s.date || s.day !== d) return;
-      html += `<div class="slot ${s.kind === "personal" ? "personal" : ""}" data-i="${i}" style="top:${(toMin(s.start) - ds) / 60 * HOUR_PX}px;height:${(toMin(s.end) - toMin(s.start)) / 60 * HOUR_PX}px;background:${colorOf(s)}">
-        <button class="x" data-i="${i}" title="삭제">×</button>${esc(s.name)}<small>${s.start}–${s.end}</small></div>`;
+      html += `<div class="slot ${s.kind === "personal" ? "personal" : ""} ${i === editing ? "picked" : ""}" data-i="${i}" style="top:${(toMin(s.start) - ds) / 60 * HOUR_PX}px;height:${(toMin(s.end) - toMin(s.start)) / 60 * HOUR_PX}px;background:${colorOf(s)}">
+        <button class="x" data-i="${i}" title="삭제" aria-label="${esc(s.name)} 삭제">×</button>${esc(s.name)}<small>${s.start}–${s.end}</small></div>`;
     });
     html += "</div>";
   }
@@ -785,7 +797,8 @@ function renderMyGrid(colorOf) {
   const add = (day, a, b) => {
     const kind = newKind();
     mySlots.push({ name: newName(kind), kind, day, date: null, start: t2(a), end: t2(b), location: null });
-    markDirty();
+    dirty = true;
+    pickSlot(mySlots.length - 1, false); // 이름이 '수업 1' 같은 임시 이름이라 바로 고칠 수 있게 펼친다
   };
   const yToMin = (col, clientY) => {
     const y = clientY - col.getBoundingClientRect().top;
@@ -833,14 +846,36 @@ function renderMyGrid(colorOf) {
   // 블록 클릭 → 아래 표의 해당 줄로 이동해서 바로 고칠 수 있게
   box.querySelectorAll(".slot").forEach(el => el.addEventListener("click", (e) => {
     const i = +el.dataset.i;
-    if (e.target.classList.contains("x")) { mySlots.splice(i, 1); markDirty(); return; }
-    const row = $(`#slot-table tr[data-i="${i}"]`);
-    row.scrollIntoView({ behavior: "smooth", block: "center" });
-    row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 1200);
-    row.querySelector('[data-f="name"]').focus();
+    if (e.target.classList.contains("x")) { mySlots.splice(i, 1); editing = -1; markDirty(); return; }
+    pickSlot(i, matchMedia("(pointer: fine)").matches); // 휴대폰은 키보드가 가리지 않게 바로 입력 칸에 들어가지 않는다
   }));
 }
 function markDirty() { dirty = true; renderMySlots(); }
+
+// 편집 탭 안내: 무엇을 누르면 되는지, 지금 고르는 일정, 전체 목록 펼치기
+function renderEditPick() {
+  const weekly = mySlots.filter(s => !s.date).length, s = mySlots[editing];
+  document.body.classList.toggle("list-open", listOpen);
+  document.body.classList.toggle("no-edit", editing < 0);
+  $("#edit-pick").hidden = !weekly;
+  $("#edit-hint").innerHTML = listOpen ? "전체 일정 목록이에요. 고친 뒤 [저장]을 눌러 주세요."
+    : s ? `<b>${esc(s.name)}</b> (${DAY_KO[s.day]} ${s.start}~${s.end})을 아래에서 고친 뒤 [저장]을 눌러 주세요.`
+    : "격자에서 고칠 일정을 누르면 여기 아래에 나와요.";
+  $("#edit-close").hidden = !s || listOpen;
+  $("#list-toggle").textContent = listOpen ? "목록 접기" : `전체 목록 보기 (${weekly}개)`;
+}
+$("#edit-close").addEventListener("click", () => { editing = -1; renderMySlots(); });
+$("#list-toggle").addEventListener("click", () => { listOpen = !listOpen; renderMySlots(); });
+// 일정 하나를 골라 아래에 펼친다 (격자 블록을 눌렀거나 새로 추가했을 때)
+function pickSlot(i, focus) {
+  editing = i;
+  renderMySlots();
+  const row = $(`#slot-table tr[data-i="${i}"]`);
+  if (!row) return;
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
+  row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 1200);
+  if (focus) row.querySelector('[data-f="name"]').focus();
+}
 
 $("#add-slot").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -850,7 +885,8 @@ $("#add-slot").addEventListener("submit", (e) => {
   mySlots.push({ name: f.name.value.trim(), kind: f.kind.value, day: f.day.value, date: null,
                  start: f.start.value, end: f.end.value, location: f.location.value.trim() || null });
   f.name.value = ""; f.location.value = "";
-  markDirty();
+  dirty = true;
+  pickSlot(mySlots.length - 1, false);
 });
 
 // 날짜별 일정 추가: 요일은 날짜에서 구한다
@@ -881,6 +917,7 @@ $("#file").addEventListener("change", async (e) => {
     // 매주 반복 수업만 새 시간표로 바꾸고, 개인 일정·날짜 지정 일정은 그대로 둔다
     const kept = mySlots.filter(s => s.kind === "personal" || s.date);
     mySlots = kept.concat(r.classes.map(c => ({ ...c, kind: "class", date: null })));
+    editing = -1; listOpen = true; // 인식 결과는 전부 확인해야 하므로 목록을 펼쳐 둔다
     markDirty();
     setView("edit"); // 인식 결과를 바로 확인·수정
     msg.innerHTML = `수업 ${r.classes.length}개를 찾았습니다.${kept.length ? ` (개인 일정 ${kept.length}개는 그대로 뒀어요)` : ""} 아래 목록에서 과목명·시간·강의실을 확인하고, 틀린 곳은 고친 뒤 저장해 주세요.` +
