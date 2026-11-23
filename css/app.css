@@ -237,10 +237,10 @@ body[data-view] { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 i.bar { display: block; height: 10px; min-width: 2px; border-radius: 5px; background: var(--accent); }
 
 /* 도움말 (js/help.js): 오른쪽 아래 ? 버튼과 설명 화면 */
-.help-fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 20; width: 48px; height: 48px; padding: 0; border-radius: 50%;
-            background: var(--accent); color: #fff; font-size: 22px; font-weight: 800; box-shadow: 0 6px 18px rgba(59,111,214,.4); }
+.help-fab { position: fixed; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 20; width: 36px; height: 36px; padding: 0; border-radius: 50%;
+            background: var(--accent); color: #fff; font-size: 17px; font-weight: 800; box-shadow: 0 4px 12px rgba(59,111,214,.35); }
 .help-fab:hover:not(:disabled) { background: var(--accent-hover); }
-body[data-view] .help-fab { bottom: calc(76px + env(safe-area-inset-bottom)); } /* 팀 페이지: 아래 탭 막대 위 */
+body[data-view] .help-fab { bottom: calc(72px + env(safe-area-inset-bottom)); } /* 팀 페이지: 아래 탭 막대 바로 위 */
 dialog.help { width: min(640px, calc(100vw - 24px)); max-height: min(86vh, 860px); padding: 24px; border: none; border-radius: 20px; color: var(--text);
               box-shadow: 0 24px 60px rgba(16,24,40,.3); overflow-y: auto; }
 dialog.help::backdrop { background: rgba(16,24,40,.45); }
@@ -299,8 +299,8 @@ body[data-view="edit"] table.slots tr.editing { background: var(--accent-soft); 
   .code { font-size: 22px; letter-spacing: 3px; }
   input, select, button { font-size: 16px; } /* 16px 미만이면 iOS가 입력 시 화면을 확대함 */
   .bottom-nav button { font-size: 12px; }
-  /* 내 시간표 탭에서는 저장 막대가 탭 막대 위에 붙으므로 ? 버튼을 그 위로 올린다 */
-  body:is([data-view="upload"], [data-view="edit"], [data-view="dates"]) .help-fab { bottom: calc(140px + env(safe-area-inset-bottom)); }
+  /* 내 시간표 탭: 저장 막대가 탭 막대 위에 붙으면 ? 버튼이 그 오른쪽 끝에 오므로, 막대 오른쪽을 비워 '팀 나가기'를 가리지 않게 한다 */
+  body:is([data-view="upload"], [data-view="edit"], [data-view="dates"]) .savebar { padding-right: 56px; }
   dialog.help { padding: 18px; }
   .month { gap: 3px; } .mo-day { min-height: 58px; padding: 4px 2px; border-radius: 8px; font-size: 12px; } .mo-day i { font-size: 10px; padding: 1px 2px; }
   input[type=time] { width: auto; min-width: 0; }
