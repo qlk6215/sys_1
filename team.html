@@ -67,6 +67,13 @@
     </div>
   </div>
 
+  <!-- 모임 투표 -->
+  <div class="card" id="poll-card" data-view="meet">
+    <h2>모임 투표</h2>
+    <ul class="poll-list" id="polls"></ul>
+    <p class="msg" id="poll-msg"></p>
+  </div>
+
   <!-- 공통 빈 시간 -->
   <div class="card" data-view="meet">
     <h2>모일 수 있는 시간 <small class="h-sub" id="free-week"></small></h2>
@@ -84,15 +91,10 @@
     <div id="reco" hidden></div>
     <h3 class="table-title" id="free-title">모든 빈 시간</h3>
     <ul class="free-list" id="free"></ul>
+    <button type="button" class="ghost" id="free-toggle" hidden></button>
     <p class="msg" id="free-msg"></p>
   </div>
 
-  <!-- 모임 투표 -->
-  <div class="card" id="poll-card" data-view="meet">
-    <h2>모임 투표</h2>
-    <ul class="poll-list" id="polls"></ul>
-    <p class="msg" id="poll-msg"></p>
-  </div>
 
   <!-- 내 시간표 -->
   <div class="card" id="my-card" data-view="upload edit dates" hidden>
@@ -404,40 +406,63 @@ function renderFree() {
   }));
   const missing = team.members.filter(m => !m.slots.length).map(m => m.name);
   msg.textContent = (missing.length ? `${missing.join(", ")} 님은 아직 시간표를 입력하지 않아 항상 가능으로 계산됩니다. ` : "")
-    + (me ? "마음에 드는 시간의 [후보로]를 누르면 아래 모임 투표에 올라가요." : "");
+    + (me ? "마음에 드는 시간의 [후보로]를 누르면 위 모임 투표에 올라가요." : "");
+  const len = +$("#min-min").value;
+  if (picking >= freeList.length) picking = -1;
+  const shown = freeOpen ? freeList.length : Math.max(FREE_SHOWN, picking + 1); // 고르는 중인 줄은 접혀 있어도 보이게
   $("#free").innerHTML = freeList.length
-    ? freeList.map((b, i) => `<li>
+    ? freeList.slice(0, shown).map((b, i) => `<li>
         <div><b>${fmtDate(b.date)}</b> ${b.start} ~ ${b.end}
           <small>${b.minutes}분${b.absent.length ? " · 불참: " + esc(b.absent.join(", ")) : ""}</small></div>
-        ${me ? `<button class="mini" data-propose="${i}">후보로</button>` : ""}
+        ${me && i !== picking ? `<button class="mini" data-propose="${i}">후보로</button>` : ""}
+        ${i === picking ? `<form class="row pick" data-pick="${i}">
+          <label>시작 시각 <input type="time" name="start" step="300" required value="${defaultStart(b, len)}" min="${b.start}" max="${t2(toMin(b.end) - len)}"></label>
+          <button class="primary mini">이 시간으로 올리기</button>
+          <button type="button" class="ghost mini" data-cancel>취소</button>
+          <small class="pick-msg">회의 ${len}분 · ${b.start}~${t2(toMin(b.end) - len)} 사이에서 시작</small>
+        </form>` : ""}
       </li>`).join("")
     : `<li>조건에 맞는 시간이 없습니다. 다른 주를 보거나, 회의 길이를 줄이거나, 빠져도 되는 인원을 늘려 보세요.</li>`;
-  $("#free").querySelectorAll("[data-propose]").forEach(b => b.addEventListener("click", () => propose(freeList[+b.dataset.propose])));
+  const more = freeList.length - FREE_SHOWN;
+  $("#free-toggle").hidden = more <= 0;
+  $("#free-toggle").textContent = freeOpen ? "접기" : `나머지 ${more}개 펼치기`;
+  $("#free").querySelectorAll("[data-propose]").forEach(b => b.addEventListener("click", () => {
+    const i = +b.dataset.propose, block = freeList[i];
+    if (block.minutes > len) { picking = i; renderFree(); }          // 구간이 길면 그 줄에서 시작 시각을 고른다
+    else proposeAt(block.date, block.start, t2(toMin(block.start) + len));
+  }));
+  $("#free").querySelector("[data-cancel]")?.addEventListener("click", () => { picking = -1; renderFree(); });
+  $("#free").querySelector("[data-pick]")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const block = freeList[picking], start = e.target.start.value, latest = t2(toMin(block.end) - len);
+    if (!start || toMin(start) < toMin(block.start) || toMin(start) > toMin(latest)) {
+      const m = e.target.querySelector(".pick-msg"); m.classList.add("error");
+      m.textContent = `시작 시각은 ${block.start}~${latest} 사이여야 합니다.`;
+      return;
+    }
+    picking = -1;
+    proposeAt(block.date, start, t2(toMin(start) + len));
+  });
 }
+const FREE_SHOWN = 2;   // '모든 빈 시간'은 이만큼만 보이고 나머지는 접어 둔다
+let freeOpen = false;   // 펼쳤는지
+let picking = -1;       // 시작 시각을 고르는 중인 줄 (없으면 -1)
+// 구간 안에서 처음 권하는 시작 시각: 정시·30분에 맞는 가장 이른 시각, 없으면 구간 시작
+function defaultStart(b, len) {
+  const t = Math.ceil(toMin(b.start) / 30) * 30;
+  return t + len <= toMin(b.end) ? t2(t) : b.start;
+}
+$("#free-toggle").addEventListener("click", () => { freeOpen = !freeOpen; renderFree(); });
 ["#min-min", "#max-absent", "#buffer", "#day-start", "#day-end", "#weekend"].forEach(s => $(s).addEventListener("change", () => { renderTeamGrid(); renderFree(); }));
 
 // ---- 모임 투표 ----
-async function propose(block) {
-  const len = +$("#min-min").value;
-  let start = block.start;
-  if (block.minutes > len) {
-    const latest = t2(toMin(block.end) - len);
-    const v = prompt(`${fmtDate(block.date)} ${block.start}~${block.end} 사이에서 시작 시각을 정해 주세요. (회의 ${len}분, ${block.start}~${latest} 사이)`, block.start);
-    if (v === null) return;
-    start = v.trim().replace(/^(\d):/, "0$1:");
-    if (!/^\d{2}:\d{2}$/.test(start) || toMin(start) < toMin(block.start) || toMin(start) > toMin(latest)) {
-      return showError($("#poll-msg"), new Error(`시작 시각은 ${block.start}~${latest} 사이여야 합니다.`));
-    }
-  }
-  await proposeAt(block.date, start, t2(toMin(start) + len));
-}
 // 정해진 시간을 후보로 올리고 투표 카드로 내려간다
 async function proposeAt(date, start, end) {
   try {
     await TP_API.proposeOption(me.id, me.token, date, start, end);
     await load();
     $("#poll-card").scrollIntoView({ behavior: "smooth", block: "start" });
-  } catch (err) { showError($("#poll-msg"), err); }
+  } catch (err) { showError($("#free-msg"), err); } // 누른 버튼 가까이에 보이게
 }
 
 const optionLabel = (o) => `${fmtDate(o.date)} ${o.start}~${o.end}`;
@@ -448,7 +473,7 @@ function renderPolls() {
   msg.className = "msg";
   if (!team.options.length) {
     list.innerHTML = "";
-    msg.textContent = me ? "아직 후보가 없어요. 위 '모일 수 있는 시간'에서 [후보로]를 눌러 올려 보세요." : "아직 후보가 없어요. 팀에 참여하면 후보를 올리고 투표할 수 있어요.";
+    msg.textContent = me ? "아직 후보가 없어요. 아래 '모일 수 있는 시간'에서 [후보로]를 눌러 올려 보세요." : "아직 후보가 없어요. 팀에 참여하면 후보를 올리고 투표할 수 있어요.";
     return;
   }
   msg.textContent = "";

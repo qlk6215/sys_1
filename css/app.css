@@ -253,6 +253,14 @@ dialog.help dl { margin: 0; display: grid; gap: 10px; }
 dialog.help dt { font-weight: 700; }
 dialog.help dd { margin: 2px 0 0; color: #4b5563; }
 
+/* 모든 빈 시간: 줄 안에서 시작 시각 고르기, 접기 */
+.free-list li { flex-wrap: wrap; }
+.free-list .pick { flex: 1 0 100%; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); gap: 6px; }
+.free-list .pick label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.free-list .pick-msg { flex: 1 0 100%; color: var(--muted); }
+.free-list .pick-msg.error { color: var(--danger); }
+#free-toggle { margin-top: 6px; font-size: 14px; }
+
 /* 추천 시간 (모임 탭) */
 .reco-list { margin-bottom: 4px; }
 .reco-list li { border-color: #c5d3f3; background: var(--accent-soft); }
