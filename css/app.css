@@ -117,7 +117,10 @@ button.mini:hover:not(:disabled) { background: var(--accent); color: #fff; }
 .confirmed-label { font-size: 13px; color: var(--accent); font-weight: 700; }
 .confirmed-time { font-size: 19px; font-weight: 700; }
 .confirmed-main small { color: var(--muted); }
-.confirmed-card button { background: var(--surface); color: var(--accent); }
+.confirmed-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.confirmed-card button, .confirmed-actions a { background: var(--surface); color: var(--accent); }
+.confirmed-actions a { padding: 9px 12px; border-radius: var(--radius-sm); font-weight: 600; }
+.confirmed-actions a:hover { background: #e9ebf0; text-decoration: none; }
 
 /* 개인 일정 */
 .slot.personal { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.14) 0 6px, transparent 6px 12px); }
@@ -233,6 +236,23 @@ body[data-view] { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 .stats-table .nowrap { white-space: nowrap; }
 i.bar { display: block; height: 10px; min-width: 2px; border-radius: 5px; background: var(--accent); }
 
+/* 도움말 (js/help.js): 오른쪽 아래 ? 버튼과 설명 화면 */
+.help-fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 20; width: 48px; height: 48px; padding: 0; border-radius: 50%;
+            background: var(--accent); color: #fff; font-size: 22px; font-weight: 800; box-shadow: 0 6px 18px rgba(59,111,214,.4); }
+.help-fab:hover:not(:disabled) { background: var(--accent-hover); }
+body[data-view] .help-fab { bottom: calc(76px + env(safe-area-inset-bottom)); } /* 팀 페이지: 아래 탭 막대 위 */
+dialog.help { width: min(640px, calc(100vw - 24px)); max-height: min(86vh, 860px); padding: 24px; border: none; border-radius: 20px; color: var(--text);
+              box-shadow: 0 24px 60px rgba(16,24,40,.3); overflow-y: auto; }
+dialog.help::backdrop { background: rgba(16,24,40,.45); }
+.help-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.help-head h2 { margin: 0; font-size: 20px; }
+dialog.help h3 { font-size: 15px; margin: 20px 0 8px; color: var(--accent-text); }
+dialog.help ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+dialog.help li b:first-child { display: block; }
+dialog.help dl { margin: 0; display: grid; gap: 10px; }
+dialog.help dt { font-weight: 700; }
+dialog.help dd { margin: 2px 0 0; color: #4b5563; }
+
 /* 월별 일정표 */
 .month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 16px; }
 .mo-head { text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); padding: 4px 0; }
@@ -259,6 +279,9 @@ i.bar { display: block; height: 10px; min-width: 2px; border-radius: 5px; backgr
   .code { font-size: 22px; letter-spacing: 3px; }
   input, select, button { font-size: 16px; } /* 16px 미만이면 iOS가 입력 시 화면을 확대함 */
   .bottom-nav button { font-size: 12px; }
+  /* 내 시간표 탭에서는 저장 막대가 탭 막대 위에 붙으므로 ? 버튼을 그 위로 올린다 */
+  body:is([data-view="upload"], [data-view="edit"], [data-view="dates"]) .help-fab { bottom: calc(140px + env(safe-area-inset-bottom)); }
+  dialog.help { padding: 18px; }
   .month { gap: 3px; } .mo-day { min-height: 58px; padding: 4px 2px; border-radius: 8px; font-size: 12px; } .mo-day i { font-size: 10px; padding: 1px 2px; }
   input[type=time] { width: auto; min-width: 0; }
   .row > input:not([type=time]) { flex: 1 1 140px; min-width: 0; }
@@ -292,7 +315,7 @@ i.bar { display: block; height: 10px; min-width: 2px; border-radius: 5px; backgr
   .free-list { grid-template-columns: 1fr; }
   .filters label:last-child { grid-column: 1 / -1; }
   .week-nav { width: 100%; justify-content: space-between; }
-  .confirmed-card button { width: 100%; }
+  .confirmed-actions { width: 100%; } .confirmed-actions > * { flex: 1; text-align: center; }
   table.slots input, table.slots select { font-size: 16px; padding: 6px 8px; }
   table.slots input[data-f="name"], table.slots input[data-f="location"] { width: 100%; min-width: 0; }
   table.slots input[type=time] { flex: 1; width: 0; }

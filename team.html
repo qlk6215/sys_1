@@ -198,6 +198,7 @@
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/store.js"></script>
+<script src="js/help.js"></script>
 <script src="js/timetable.js"></script>
 <script src="js/scheduler.js"></script>
 <script>
@@ -489,36 +490,61 @@ function renderConfirmed() {
       <b class="confirmed-time">${optionLabel(o)}</b>
       <small>가능 ${yes}/${team.members.length}명</small>
     </div>
-    <button id="ics">캘린더에 추가</button>`;
+    <div class="confirmed-actions">
+      <button id="ics">캘린더에 추가</button>
+      <a id="gcal" href="${esc(gcalUrl(o))}" target="_blank" rel="noopener">구글 캘린더</a>
+    </div>`;
   $("#ics").addEventListener("click", () => downloadIcs(o));
+  $("#gcal").hidden = IS_ANDROID; // 안드로이드에서는 위 버튼이 이미 구글 캘린더로 간다
+}
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+
+// 모임 시각(한국 시간) → UTC 표기(…Z). 한국은 서머타임 없는 UTC+9.
+// VTIMEZONE 없이 TZID를 쓰면 일부 캘린더 앱이 시각을 틀리게 읽으므로 UTC로 쓴다
+const utcStamp = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+const meetUtc = (date, hhmm) => {
+  const [y, m, d] = date.split("-").map(Number), [h, mi] = hhmm.split(":").map(Number);
+  return utcStamp(new Date(Date.UTC(y, m - 1, d, h - 9, mi)));
+};
+const meetTitle = () => `${team.name} 팀플 모임`;
+const meetNote = () => `팀플 캘린더에서 확정한 모임입니다.\n${location.origin}${location.pathname}?c=${team.code}`;
+
+// 구글 캘린더 일정 만들기 링크: 파일을 내려받지 않아서 카톡 같은 앱 안 브라우저에서도 된다
+function gcalUrl(o) {
+  return "https://calendar.google.com/calendar/render?" + new URLSearchParams({
+    action: "TEMPLATE", text: meetTitle(), dates: `${meetUtc(o.date, o.start)}/${meetUtc(o.date, o.end)}`, details: meetNote(),
+  });
 }
 
-// .ics 파일 → 구글/아이폰/삼성 캘린더에 추가
-function downloadIcs(o) {
-  // VTIMEZONE 없이 TZID를 쓰면 일부 캘린더 앱이 시각을 틀리게 읽으므로 UTC(…Z)로 쓴다. 한국은 서머타임 없는 UTC+9
-  const utc = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
-  const dt = (date, hhmm) => {
-    const [y, m, d] = date.split("-").map(Number), [h, mi] = hhmm.split(":").map(Number);
-    return utc(new Date(Date.UTC(y, m - 1, d, h - 9, mi)));
-  };
-  const stamp = utc(new Date());
+// .ics 파일 → 아이폰/삼성/구글 캘린더에 추가
+async function downloadIcs(o) {
+  // 안드로이드(갤럭시 등): 삼성·구글 캘린더 앱은 .ics 파일을 눌러도 일정을 넣어 주지 않는 경우가 많다 → 구글 캘린더 일정 만들기로 보낸다
+  if (IS_ANDROID) { window.open(gcalUrl(o), "_blank", "noopener"); return; }
   const icsText = (s) => s.replace(/[\\;,]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
   const ics = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//teamplay-calendar//KO", "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:tp-${team.code}-${o.id}@teamplay-calendar`,
-    `DTSTAMP:${stamp}`,
-    `DTSTART:${dt(o.date, o.start)}`,
-    `DTEND:${dt(o.date, o.end)}`,
-    `SUMMARY:${icsText(`${team.name} 팀플 모임`)}`,
-    `DESCRIPTION:${icsText(`팀플 캘린더에서 확정한 모임입니다.\n${location.origin}${location.pathname}?c=${team.code}`)}`,
+    `DTSTAMP:${utcStamp(new Date())}`,
+    `DTSTART:${meetUtc(o.date, o.start)}`,
+    `DTEND:${meetUtc(o.date, o.end)}`,
+    `SUMMARY:${icsText(meetTitle())}`,
+    `DESCRIPTION:${icsText(meetNote())}`,
     "END:VEVENT", "END:VCALENDAR",
   ].join("\r\n");
+  const name = `${team.name}_모임_${o.date}.ics`;
+  // 휴대폰: 공유 창으로 파일을 넘겨 캘린더 앱을 고르게 한다. 휴대폰 브라우저는 파일 내려받기를 막거나 조용히 실패하는 경우가 많다
+  if (matchMedia("(pointer: coarse)").matches) {
+    try {
+      const file = new File([ics], name, { type: "text/calendar" });
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: meetTitle() }); return; }
+    } catch (e) { if (e.name === "AbortError") return; } // 공유 창을 닫은 경우. 그 밖의 실패는 내려받기로 넘어간다
+  }
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
-  a.download = `${team.name}_모임_${o.date}.ics`;
+  a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000); // 내려받기 확인 창에서 늦게 눌러도 되게 넉넉히
 }
 
 // ---- 참여 / 나가기 ----

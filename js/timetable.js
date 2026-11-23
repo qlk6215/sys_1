@@ -167,7 +167,7 @@
 
   const TESSERACT_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
   const ROOM_RE = /\d+-\d/; // 강의실 코드 (예: N14-404, S1-4-201). 과목명에는 '숫자-숫자'가 거의 없다
-  const workers = {};       // "kor+eng" 기본 인식, "kor" 영문+한글 섞인 단어 보정용
+  const workers = {};       // "kor+eng" 기본 인식, "kor" 영문+한글 섞인 단어 보정용, "eng" 숫자로 잘못 읽힌 영문 보정용
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -256,6 +256,26 @@
     }
   }
 
+  // 한국어가 든 모델은 "MIS강독"의 영문을 숫자("115강독")로 읽기도 한다.
+  // 영어 모델이 같은 자리를 전부 영문자로 읽었고 글자 수도 비슷하면 영문자로 바꾼다. ("2D그래픽"처럼 영어 모델도 숫자로 읽으면 그대로 둔다)
+  function fixDigitWords(rows, engRows) {
+    const engWords = engRows.flatMap((r) => r.words);
+    for (const row of rows) {
+      if (isRoom(row)) break;
+      for (const w of row.words) {
+        if (!/^[A-Za-z0-9]+$/.test(w.text) || !/\d/.test(w.text)) continue;
+        const letters = engWords
+          .filter((k) => Math.min(w.y1, k.y1) > Math.max(w.y0, k.y0))
+          .flatMap((k) => k.symbols)
+          .filter((sym) => { const c = (sym.x0 + sym.x1) / 2; return c > w.x0 - 2 && c < w.x1 + 2; })
+          .sort((x, y) => x.x0 - y.x0).map((sym) => sym.text).join("");
+        if (!/^[A-Za-z]{2,}$/.test(letters) || Math.abs(letters.length - w.text.length) > 1) continue;
+        row.text = row.text.replace(w.text, letters);
+        w.text = letters;
+      }
+    }
+  }
+
   // OCR 줄들 → { name, location }
   // 에브리타임은 블록 너비에서 글자 단위로 줄바꿈하고, 단어 사이 공백은 다음 줄 맨 앞으로 넘어간다.
   // 그래서 다음 줄이 들여 쓰여 있거나, 앞 줄이 오른쪽 끝까지 차지 않았으면 단어가 끝난 것으로 본다.
@@ -285,6 +305,9 @@
         const needsKor = rows.slice(0, nameEnd < 0 ? 3 : nameEnd)
           .some((r) => r.words.some((w) => /^[A-Za-z0-9]+$/.test(w.text)));
         if (needsKor) fixMixedWords(rows, await ocrRows(await getWorker(["kor"]), canvas));
+        const digitWord = rows.slice(0, nameEnd < 0 ? 3 : nameEnd)
+          .some((r) => r.words.some((w) => /^[A-Za-z0-9]+$/.test(w.text) && /\d/.test(w.text)));
+        if (digitWord) fixDigitWords(rows, await ocrRows(await getWorker(["eng"]), canvas));
         const { name, location } = parseLines(rows);
         if (/[가-힣A-Za-z]{2,}/.test(name)) classes[i].name = name.slice(0, 50);
         if (location) classes[i].location = location.slice(0, 50);
