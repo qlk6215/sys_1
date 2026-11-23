@@ -63,5 +63,35 @@
     return out;
   }
 
-  window.TP_SCHEDULER = { freeBlocks, busyAt, slotsOn, weekDates, dayOf, today, ymd, parseYmd, toMin, toHHMM, STEP, DAYS };
+  // 빈 구간들에서 회의 길이(len분)짜리 모임 시간을 골라 점수가 높은 순으로 추천한다. 하루에 하나씩, 최대 max개.
+  // 점수: 불참이 적을수록, 낮 2시에 가까울수록, 점심(12~13시)·이른 아침(10시 전)·저녁(18시 뒤)을 피할수록,
+  //       날짜가 가까울수록, 앞뒤로 여유가 있을수록 높다. 시작은 정시·30분에 맞춘다.
+  // taken: 이미 올라온 후보 [{ date, start, end }] 는 다시 추천하지 않는다.
+  function recommend(blocks, { len = 60, now = new Date(), max = 3, taken = [] } = {}) {
+    const today = ymd(now), nowMin = now.getHours() * 60 + now.getMinutes();
+    const daysAway = (s) => Math.round((parseYmd(s) - parseYmd(today)) / 86400000);
+    const best = new Map(); // 날짜 → 그날 최고 점수 후보
+    for (const b of blocks) {
+      const bs = toMin(b.start), be = toMin(b.end), starts = [];
+      for (let t = Math.ceil(bs / 30) * 30; t + len <= be; t += 30) starts.push(t);
+      if (!starts.length && bs + len <= be) starts.push(bs); // 정시·30분에 맞는 자리가 없으면 구간 시작
+      for (const t of starts) {
+        if (b.date === today && t < nowMin + 30) continue; // 이미 지났거나 30분 안에 시작하는 시간은 제외
+        const start = toHHMM(t), end = toHHMM(t + len);
+        if (taken.some((o) => o.date === b.date && o.start === start && o.end === end)) continue;
+        const lunch = t < 13 * 60 && t + len > 12 * 60;
+        const score = 100 - b.absent.length * 30 - (Math.abs(t + len / 2 - 14 * 60) / 60) * 4
+          - (lunch ? 8 : 0) - (t < 10 * 60 ? 10 : 0) - (t + len > 18 * 60 ? 10 : 0)
+          - daysAway(b.date) * 2 + (Math.min(t - bs, be - t - len, 60) / 60) * 3;
+        const cur = best.get(b.date);
+        if (!cur || score > cur.score) {
+          best.set(b.date, { date: b.date, day: b.day, start, end, absent: b.absent, score,
+            when: lunch ? "점심 무렵" : t < 12 * 60 ? "오전" : t + len <= 18 * 60 ? "오후" : "저녁" });
+        }
+      }
+    }
+    return [...best.values()].sort((x, y) => y.score - x.score).slice(0, max);
+  }
+
+  window.TP_SCHEDULER = { recommend, freeBlocks, busyAt, slotsOn, weekDates, dayOf, today, ymd, parseYmd, toMin, toHHMM, STEP, DAYS };
 })();

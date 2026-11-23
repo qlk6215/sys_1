@@ -81,6 +81,8 @@
       <label><input type="time" id="day-start" value="09:00"> ~ <input type="time" id="day-end" value="21:00"></label>
       <label><input type="checkbox" id="weekend" checked> 주말 포함</label>
     </div>
+    <div id="reco" hidden></div>
+    <h3 class="table-title" id="free-title">모든 빈 시간</h3>
     <ul class="free-list" id="free"></ul>
     <p class="msg" id="free-msg"></p>
   </div>
@@ -379,6 +381,7 @@ function renderTeamGrid() {
 let freeList = [];
 function renderFree() {
   const msg = $("#free-msg"); msg.className = "msg";
+  $("#reco").hidden = true;
   if (!team.members.length) { $("#free").innerHTML = ""; msg.textContent = "팀원이 참여하면 여기에 모일 수 있는 시간이 표시됩니다."; return; }
   const today = S.today();
   freeList = S.freeBlocks(team.members, {
@@ -386,6 +389,19 @@ function renderFree() {
     minMinutes: +$("#min-min").value, maxAbsent: +$("#max-absent").value, buffer: +$("#buffer").value,
     dayStart: $("#day-start").value || "09:00", dayEnd: $("#day-end").value || "21:00",
   });
+  // 추천 시간: 빈 구간에서 가장 좋은 모임 시간을 하루에 하나씩, 최대 3개
+  const reco = S.recommend(freeList, { len: +$("#min-min").value, taken: team.options });
+  $("#reco").hidden = !reco.length;
+  $("#reco").innerHTML = !reco.length ? "" : `
+    <h3 class="table-title" style="margin-top:0">추천 시간 <small>— 모두 되는 낮 시간을 가까운 날짜부터 골랐어요</small></h3>
+    <ul class="free-list reco-list">${reco.map((r, i) => `<li>
+      <div><b>${fmtDate(r.date)}</b> ${r.start} ~ ${r.end}
+        <small>${r.absent.length ? "불참: " + esc(r.absent.join(", ")) : "모두 가능"} · ${r.when}</small></div>
+      ${me ? `<button class="mini" data-reco="${i}">후보로</button>` : ""}
+    </li>`).join("")}</ul>`;
+  $("#reco").querySelectorAll("[data-reco]").forEach(b => b.addEventListener("click", () => {
+    const r = reco[+b.dataset.reco]; proposeAt(r.date, r.start, r.end);
+  }));
   const missing = team.members.filter(m => !m.slots.length).map(m => m.name);
   msg.textContent = (missing.length ? `${missing.join(", ")} 님은 아직 시간표를 입력하지 않아 항상 가능으로 계산됩니다. ` : "")
     + (me ? "마음에 드는 시간의 [후보로]를 누르면 아래 모임 투표에 올라가요." : "");
@@ -413,8 +429,12 @@ async function propose(block) {
       return showError($("#poll-msg"), new Error(`시작 시각은 ${block.start}~${latest} 사이여야 합니다.`));
     }
   }
+  await proposeAt(block.date, start, t2(toMin(start) + len));
+}
+// 정해진 시간을 후보로 올리고 투표 카드로 내려간다
+async function proposeAt(date, start, end) {
   try {
-    await TP_API.proposeOption(me.id, me.token, block.date, start, t2(toMin(start) + len));
+    await TP_API.proposeOption(me.id, me.token, date, start, end);
     await load();
     $("#poll-card").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) { showError($("#poll-msg"), err); }

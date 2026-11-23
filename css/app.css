@@ -253,6 +253,10 @@ dialog.help dl { margin: 0; display: grid; gap: 10px; }
 dialog.help dt { font-weight: 700; }
 dialog.help dd { margin: 2px 0 0; color: #4b5563; }
 
+/* 추천 시간 (모임 탭) */
+.reco-list { margin-bottom: 4px; }
+.reco-list li { border-color: #c5d3f3; background: var(--accent-soft); }
+
 /* 월별 일정표 */
 .month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 16px; }
 .mo-head { text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); padding: 4px 0; }
